@@ -41,6 +41,8 @@ class StudentModel(Model):
 
     # STUDENT: construct here your model
     # this class should be loading your weights and vocabulary
+    def __init__(self):
+        pass
 
     def predict(self, tokens: List[List[str]]) -> List[List[str]]:
         # STUDENT: implement here your predict function
