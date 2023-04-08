@@ -1,0 +1,6 @@
+2023-04-08T17:27:53.701198267Z Traceback (most recent call last):
+2023-04-08T17:27:53.701225971Z   File "/home/app/hw1/app.py", line 3, in <module>
+2023-04-08T17:27:53.701228425Z     from stud.implementation import build_model
+2023-04-08T17:27:53.701229914Z   File "/home/app/hw1/stud/implementation.py", line 3, in <module>
+2023-04-08T17:27:53.701231413Z     from word2vec import Word2Vec, DatasetGenerator
+2023-04-08T17:27:53.701232731Z ModuleNotFoundError: No module named 'word2vec'
