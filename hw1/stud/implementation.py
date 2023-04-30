@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+from word2vec import Word2Vec, DatasetGenerator
 from typing import List
 
 from model import Model
@@ -7,6 +9,9 @@ from model import Model
 def build_model(device: str) -> Model:
     # STUDENT: return StudentModel()
     # STUDENT: your model MUST be loaded on the device "device" indicates
+    train = pd.read_json("data/train.csv")
+
+    data = DatasetGenerator(train)
     return RandomBaseline()
 
 
