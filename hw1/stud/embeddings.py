@@ -1,5 +1,5 @@
 import numpy as np
-import config
+import hw1.config as config
 import torch
 from gensim.models import KeyedVectors
 import gensim.downloader as api
@@ -9,10 +9,18 @@ import os
 
 def load_embeddings(embedding_path: str = config.EMBEDDINGS_PATH, embedding_type: str = config.EMBEDDING_MODEL):
     
+    # check if file exists
     if not os.path.exists(embedding_path):
         print("Embedding file not found. Downloading...")
-        emb_file = api.load(embedding_type)
-        emb_file.save(embedding_path)
+        
+        # if embedding_type == 'GenW2V':
+        #     emb_file = api.load('word2vec-google-news-300')
+        # elif embedding_type == 'GenGlove':
+        #     emb_file = api.load('glove-wiki-gigaword-300')
+        # elif embedding_type == 'Fasttext':
+        #     emb_file = api.load('fasttext-wiki-news-subwords-300')
+
+        # emb_file.save(embedding_path)
         print("Embedding file saved to {}".format(embedding_path))
     else:
         emb_file = KeyedVectors.load(embedding_path) 

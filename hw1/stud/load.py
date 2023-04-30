@@ -8,7 +8,7 @@ import numpy as np
 
 
 
-class Dataset(Dataset):
+class MyDataset(Dataset):
     def __init__(self, path, word2idx, label2idx):
         self.data = []
         self.word2idx = word2idx

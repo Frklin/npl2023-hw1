@@ -1,3 +1,6 @@
+import sys
+sys.path.append('hw1/stud')
+sys.path.append('hw1')
 import torch
 import torch.nn as nn
 import config
@@ -10,9 +13,10 @@ class BiLSTM(nn.Module):
         self.embeddings = nn.Embedding.from_pretrained(embeddings)
         self.embeddings.weight.requires_grad = True  
         self.classifier = classifier
+        self.hidden_dim = hidden_size
 
         # LSTM
-        self.bilstm = nn.LSTM(embeddings.shape[1], hidden_size, num_layers=lstm_layers, bidirectional=True)
+        self.bilstm = nn.LSTM(embeddings.shape[1], hidden_size, num_layers=lstm_layers, bidirectional=True, batch_first=True)
         self.hidden = None
         
         # Softmax
@@ -25,8 +29,8 @@ class BiLSTM(nn.Module):
 
     def init_hidden(self, batch_size):
         return (
-            torch.randn(2, batch_size, self.hidden_dim // 2),
-            torch.randn(2, batch_size, self.hidden_dim // 2),
+            torch.randn(4, batch_size, self.hidden_dim),
+            torch.randn(4, batch_size, self.hidden_dim),
         )
     
 

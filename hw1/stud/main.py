@@ -1,9 +1,14 @@
 # from hw1.stud import *
+import sys
+sys.path.append('hw1/stud/')
+sys.path.append('hw1')
 from embeddings import load_embeddings
 import torch
 import torch.nn as nn
 import config
 from bilstm import BiLSTM
+from load import MyDataset
+from utils import seed_everything, collate_fn
 from torch.utils.data import Dataset, DataLoader
 import torch.optim as optim
 from model import Trainer
@@ -14,22 +19,27 @@ from model import Trainer
 
 def main():
     
+    seed_everything(config.SEED)
+    
     embeddings, word2idx = load_embeddings()
     
+    print("Embeddings shape: ", embeddings.shape)
+    print("Word2idx length: ", len(word2idx))
+
     label2idx = {"O": 0, "B-SENTIMENT": 1, "I-SENTIMENT": 2, "B-CHANGE": 3, "I-CHANGE": 4, "B-ACTION": 5, "I-ACTION": 6, "B-SCENARIO": 7, "I-SCENARIO": 8, "B-POSSESSION": 9, "I-POSSESSION": 10, "<PAD>" : config.PAD_VAL}
     idx2label = {v: k for k, v in label2idx.items()}
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    train_dataset = Dataset(config.TRAIN_PATH, word2idx, label2idx)
-    val_dataset = Dataset(config.VAL_PATH, word2idx, label2idx)
-    test_dataset = Dataset(config.TEST_PATH, word2idx, label2idx)
+    train_dataset = MyDataset(config.TRAIN_PATH, word2idx, label2idx)
+    val_dataset = MyDataset(config.VAL_PATH, word2idx, label2idx)
+    test_dataset = MyDataset(config.TEST_PATH, word2idx, label2idx)
 
-    train_loader = DataLoader(train_dataset, batch_size=config.BATCH_SIZE, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=config.BATCH_SIZE, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=config.BATCH_SIZE, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn)
+    val_loader = DataLoader(val_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn)
+    test_loader = DataLoader(test_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn)
 
-    model_name = config.EMBEDDING_MODEL + ("" if config.N_LSTMS == 1 else "Bi-" if config.N_LSTMS == 2 else "Tri-") + "LSTM_" + config.CLASSIFIER + "_" + config.OPTIMIZER + "_" + str(config.LEARNING_RATE) + "LR_" + str(config.DROPRATE) + "_DROP_" 
+    model_name = config.EMBEDDING_MODEL + "_" + ("" if config.N_LSTMS == 1 else "Bi-" if config.N_LSTMS == 2 else "Tri-") + "LSTM_" + config.CLASSIFIER + "_" + config.OPTIMIZER + "_" + str(config.LEARNING_RATE) + "LR_" + str(config.DROPRATE) + "DP" 
     print(model_name)
     # wandb.init(
     #   # Set the project where this run will be logged
@@ -48,7 +58,7 @@ def main():
     #   })
 
 
-    model = BiLSTM(embeddings, len(label2idx), device)
+    model = BiLSTM(embeddings, len(label2idx))
     # wandb.watch(model)
 
     if config.OPTIMIZER == 'adam':
