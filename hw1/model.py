@@ -50,13 +50,12 @@ class Trainer:
     def train_epoch(self):
         self.model.train()
         total_loss = 0
-        batch_acc = batch_f1 = 0
         y_true_train = []
         y_pred_train = []
 
         pbar = tqdm(self.train_dataloader, total=20000//config.BATCH_SIZE)
 
-        for idx, (tokens, labels, token_lengths )in enumerate(pbar):
+        for idx, (tokens, labels, token_lengths) in enumerate(pbar):
             tokens, labels = tokens.to(self.device), labels.to(self.device)
 
             self.optimizer.zero_grad()
@@ -81,8 +80,9 @@ class Trainer:
                 self.model.zero_grad()
                 loss = self.model.loss(tokens, labels, token_lengths, mask)
 
-                preds = self.model.forward(tokens, token_lengths)
-                labels = labels.cpu().numpy()
+                score, preds = self.model.decode(tokens,token_lengths, mask)
+                labels = labels.view(-1).cpu().numpy()
+                preds = sum(preds, [])
 
             else:
                 raise NotImplementedError
@@ -92,11 +92,12 @@ class Trainer:
             loss.backward()
             self.optimizer.step()
 
-            orig_idxs = np.where(labels != config.PAD_VAL)[0]
-            preds = preds[orig_idxs]
-            labels = labels[orig_idxs]
+            # preds = preds[labels != config.PAD_VAL]
+            org_idxs = np.where(labels != config.PAD_VAL)[0]
+            labels = labels[org_idxs]
+            # labels = labels[labels != config.PAD_VAL]
             y_true_train.extend(labels.tolist())
-            y_pred_train.extend(preds.tolist())
+            y_pred_train.extend(preds)
 
             total_loss += loss.item()
 

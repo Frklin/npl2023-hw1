@@ -55,22 +55,20 @@ class BiLSTM(nn.Module):
         x = self.linear2(x)
 
         if self.classifier == 'CRF' and flag:
-            # mask = [i != config.PAD_IDX for i in tokens]
-            print("sono entrato nel crf")
             score, path = self.crf.decode(x, mask=mask)
             return score, path
-
  
         return x
 
     def loss(self, x, y, token_lengths, mask=None):
         emissions = self.forward(x, token_lengths, mask=mask, flag=0)
-        # x = self.embeddings(x)
-        # emissions = self.bilstm(x)[0]
         nll = self.crf(emissions, y, mask=mask)
         return nll
 
-
+    def decode(self, x, token_lengths, mask=None):
+        emissions = self.forward(x, token_lengths, mask=mask, flag=0)
+        score, preds = self.crf.decode(emissions, mask=mask)
+        return  score, preds
 
 
 

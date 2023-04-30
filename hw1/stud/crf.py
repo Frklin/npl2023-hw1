@@ -17,7 +17,7 @@ class CRF(nn.Module):
     """
 
     def __init__(
-        self, nb_labels, bos_tag_id=config.BOS, eos_tag_id=config.EOS, pad_tag_id=config.PAD_IDX, batch_first=True
+        self, nb_labels, bos_tag_id=config.BOS, eos_tag_id=config.EOS, pad_tag_id=config.PAD_VAL, batch_first=True
     ):
         super().__init__()
 
@@ -121,7 +121,7 @@ class CRF(nn.Module):
                 Shape of (batch_size,)
         """
         batch_size, seq_length = tags.shape
-        scores = torch.zeros(batch_size)
+        scores = torch.zeros(batch_size).to(emissions.device)  # TO CHECK
 
         # save first and last tags to be used later
         first_tags = tags[:, 0]
