@@ -75,7 +75,7 @@ class Trainer:
             
             elif self.classifier == 'crf':
 
-                mask = (labels != config.PAD_VAL).int()
+                mask = (labels != config.PAD_VAL).float()
                 
                 self.model.zero_grad()
                 loss = self.model.loss(tokens, labels, token_lengths, mask)
@@ -131,11 +131,12 @@ class Trainer:
             for tokens, labels, token_lengths in tqdm(self.dev_dataloader):
                 tokens, labels = tokens.to(self.device), labels.to(self.device)
                 if self.classifier == 'crf':
-                    mask = (labels != config.PAD_VAL).int()
-                    scores, seqs = self.model(tokens, mask)
-                    #loss = self.model.loss(tokens, labels, mask)
-                    preds = seqs.cpu().numpy()
-                    labels = labels.cpu().numpy()
+                    mask = (labels != config.PAD_VAL).float()
+                    loss = self.model.loss(tokens, labels, token_lengths, mask)
+
+                    score, preds = self.model.decode(tokens,token_lengths, mask)
+                    labels = labels.view(-1).cpu().numpy()
+                    preds = sum(preds, [])
 
                 elif self.classifier == 'softmax':
                     logits = self.model(tokens, token_lengths)
@@ -146,7 +147,6 @@ class Trainer:
                 total_loss += loss.item()
 
                 orig_idxs = np.where(labels != config.PAD_VAL)[0]
-                preds = preds[orig_idxs]
                 labels = labels[orig_idxs]
                 y_true_val.extend(labels.tolist())
                 y_pred_val.extend(preds.tolist())
