@@ -29,7 +29,7 @@ class Model:
 
 
 class Trainer:
-    def __init__(self, model, train_dataloader, dev_dataloader, optimizer, loss_function, device ,clip = False, classifier = 'softmax'):
+    def __init__(self, model, train_dataloader, dev_dataloader, optimizer, loss_function, device ,clip = False, classifier = config.CLASSIFIER):
         self.model = model.to(device)
         self.train_dataloader = train_dataloader
         self.dev_dataloader = dev_dataloader
@@ -76,12 +76,12 @@ class Trainer:
             
             elif self.classifier == 'crf':
 
-                mask = labels != config.PAD_VAL
+                mask = (labels != config.PAD_VAL).int()
                 
                 self.model.zero_grad()
-                loss = self.model.loss(tokens, labels, mask)
+                loss = self.model.loss(tokens, labels, token_lengths, mask)
 
-                preds = self.model.predict(tokens, mask).cpu().numpy()
+                preds = self.model.forward(tokens, token_lengths)
                 labels = labels.cpu().numpy()
 
             else:
@@ -130,7 +130,7 @@ class Trainer:
             for tokens, labels, token_lengths in tqdm(self.dev_dataloader):
                 tokens, labels = tokens.to(self.device), labels.to(self.device)
                 if self.classifier == 'crf':
-                    mask = labels != config.PAD_VAL
+                    mask = (labels != config.PAD_VAL).int()
                     scores, seqs = self.model(tokens, mask)
                     #loss = self.model.loss(tokens, labels, mask)
                     preds = seqs.cpu().numpy()

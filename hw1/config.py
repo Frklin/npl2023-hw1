@@ -6,7 +6,9 @@ NEGATIVE_SAMPLES        = 5          # Negative samples for each word
 UNK_TOKEN               = "<UNK>"    # Unknown token
 PAD_TOKEN               = "<PAD>"    # Padding token
 PAD_IDX                 = 0          # Padding index
-PAD_VAL                 = -100       # Padding value
+PAD_VAL                 = 11       # Padding value
+BOS                     = 12         # BOS index
+EOS                     = 13         # EOS index
 
 # LSTM
 EPOCHS                  = 30         # Number of epochs

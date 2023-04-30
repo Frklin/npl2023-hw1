@@ -17,7 +17,7 @@ class CRF(nn.Module):
     """
 
     def __init__(
-        self, nb_labels, bos_tag_id, eos_tag_id, pad_tag_id=config.PAD_IDX, batch_first=True
+        self, nb_labels, bos_tag_id=config.BOS, eos_tag_id=config.EOS, pad_tag_id=config.PAD_IDX, batch_first=True
     ):
         super().__init__()
 

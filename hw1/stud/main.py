@@ -26,7 +26,7 @@ def main():
     print("Embeddings shape: ", embeddings.shape)
     print("Word2idx length: ", len(word2idx))
 
-    label2idx = {"O": 0, "B-SENTIMENT": 1, "I-SENTIMENT": 2, "B-CHANGE": 3, "I-CHANGE": 4, "B-ACTION": 5, "I-ACTION": 6, "B-SCENARIO": 7, "I-SCENARIO": 8, "B-POSSESSION": 9, "I-POSSESSION": 10, "<PAD>" : config.PAD_VAL}
+    label2idx = {"O": 0, "B-SENTIMENT": 1, "I-SENTIMENT": 2, "B-CHANGE": 3, "I-CHANGE": 4, "B-ACTION": 5, "I-ACTION": 6, "B-SCENARIO": 7, "I-SCENARIO": 8, "B-POSSESSION": 9, "I-POSSESSION": 10, config.PAD_TOKEN : config.PAD_VAL, "<BOS>" : config.BOS, "<EOS>" : config.EOS}
     idx2label = {v: k for k, v in label2idx.items()}
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -58,7 +58,7 @@ def main():
     #   })
 
 
-    model = BiLSTM(embeddings, len(label2idx))
+    model = BiLSTM(embeddings, len(label2idx), device=device)
     # wandb.watch(model)
 
     if config.OPTIMIZER == 'adam':
