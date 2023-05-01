@@ -1,8 +1,14 @@
 import config
 import random
 import os
+import re
 import numpy as np
 import torch
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords
+
 
 def seed_everything(seed = config.SEED):
     random.seed(seed)
@@ -31,3 +37,30 @@ def collate_fn(batch):
 
     return tokens_tensor, labels_tensor, lengths_tensor
 
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('wordnet')
+stopwords = set(stopwords.words('english'))
+lemmatizer = WordNetLemmatizer()
+
+
+
+
+def preprocess_sentence(sentence):
+
+    # 1. Convert to lower case
+    sentence = sentence.lower()
+
+    # 2. Remove special characters and digits
+    text = re.sub(r'[^a-zA-Z\s]', '', text)
+
+    # 3. Tokenize sentence
+    tokens = word_tokenize(sentence)
+
+    # 4. Remove stopwords
+    tokens = [token for token in tokens if token not in stopwords]
+
+    # 5. Lemmatize tokens
+    tokens = [lemmatizer.lemmatize(token) for token in tokens]
+
+    return tokens

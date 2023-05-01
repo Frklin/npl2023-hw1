@@ -3,8 +3,7 @@ from torch.utils.data import Dataset, DataLoader
 import jsonlines
 import config
 import numpy as np
-# import toeknizer
-
+from hw1.stud.utils import preprocess_sentence
 
 
 
@@ -13,11 +12,21 @@ class MyDataset(Dataset):
         self.data = []
         self.word2idx = word2idx
         self.label2idx = label2idx
+        # with jsonlines.open(path) as f:
+        #     for line in f:
+        #         tokens = line['tokens']
+        #         labels = line['labels']
+        #         self.data.append((tokens, labels))
+        self.tokens, self.labels = self.load_data(path)
+
+    def load_data(self, path):
+        tokens = []
+        labels = []
         with jsonlines.open(path) as f:
             for line in f:
-                tokens = line['tokens']
-                labels = line['labels']
-                self.data.append((tokens, labels))
+                tokens.append(preprocess_sentence(line['tokens']))
+                labels.append(line['labels'])
+        return tokens, labels
 
     def __len__(self):
         return len(self.data)
