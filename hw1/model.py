@@ -55,33 +55,41 @@ class Trainer:
 
         pbar = tqdm(self.train_dataloader, total=20000//config.BATCH_SIZE)
 
-        for idx, (tokens, labels, token_lengths) in enumerate(pbar):
-            tokens, labels = tokens.to(self.device), labels.to(self.device)
+        for idx, (tokens, labels, token_lengths, pos) in enumerate(pbar):
+            tokens, labels, pos = tokens.to(self.device), labels.to(self.device), pos.to(self.device)
 
+            pos_vectors = torch.zeros((len(pos), torch.max(token_lengths), config.POS_DIM),dtype=torch.float32).to(self.device)
+            
+            for i, sen in enumerate(pos):
+                for j, tag in enumerate(sen):
+                    pos_vectors[i][j] = F.one_hot(tag, num_classes=config.POS_DIM)
+                    
             self.optimizer.zero_grad()
 
             if self.classifier == 'softmax':
 
-                logits = self.model(tokens, token_lengths)
+                logits = self.model(tokens, token_lengths, pos_vectors)
 
                 loss = self.loss_function(logits.view(-1, logits.shape[-1]), labels.view(-1))
 
                 preds = logits.argmax(dim=-1).view(-1).cpu().numpy()
                 labels = labels.view(-1).cpu().numpy()
-            
-
-
-
+                org_idxs = np.where(labels != config.PAD_VAL)[0]
+                labels = labels[org_idxs]
+                preds = preds[org_idxs].tolist()
             
             elif self.classifier == 'crf':
 
-                mask = (labels != config.PAD_VAL).float()
+                m = (labels != config.PAD_VAL)
+                mask = m.clone().detach().to(torch.uint8)
                 
                 self.model.zero_grad()
-                loss = self.model.loss(tokens, labels, token_lengths, mask)
+                loss = self.model.loss(tokens, labels, token_lengths, pos_vectors, mask)
 
-                score, preds = self.model.decode(tokens,token_lengths, mask)
+                preds = self.model.decode(tokens,token_lengths, pos_vectors, mask)
                 labels = labels.view(-1).cpu().numpy()
+                org_idxs = np.where(labels != config.PAD_VAL)[0]
+                labels = labels[org_idxs]
                 preds = sum(preds, [])
 
             else:
@@ -93,8 +101,7 @@ class Trainer:
             self.optimizer.step()
 
             # preds = preds[labels != config.PAD_VAL]
-            org_idxs = np.where(labels != config.PAD_VAL)[0]
-            labels = labels[org_idxs]
+
             # labels = labels[labels != config.PAD_VAL]
             y_true_train.extend(labels.tolist())
             y_pred_train.extend(preds)
@@ -131,11 +138,14 @@ class Trainer:
             for tokens, labels, token_lengths in tqdm(self.dev_dataloader):
                 tokens, labels = tokens.to(self.device), labels.to(self.device)
                 if self.classifier == 'crf':
-                    mask = (labels != config.PAD_VAL).float()
+                    m = (labels != config.PAD_VAL)
+                    mask = m.clone().detach().to(torch.uint8)
                     loss = self.model.loss(tokens, labels, token_lengths, mask)
 
-                    score, preds = self.model.decode(tokens,token_lengths, mask)
+                    preds = self.model.decode(tokens,token_lengths, mask)
                     labels = labels.view(-1).cpu().numpy()
+                    org_idxs = np.where(labels != config.PAD_VAL)[0]
+                    labels = labels[org_idxs]
                     preds = sum(preds, [])
 
                 elif self.classifier == 'softmax':
@@ -143,13 +153,14 @@ class Trainer:
                     loss = self.loss_function(logits.view(-1, logits.shape[-1]), labels.view(-1))
                     preds = logits.argmax(dim=-1).view(-1).cpu().numpy()
                     labels = labels.view(-1).cpu().numpy()
+                    orig_idxs = np.where(labels != config.PAD_VAL)[0]
+                    labels = labels[orig_idxs]
+                    preds = preds[orig_idxs].tolist()
 
                 total_loss += loss.item()
 
-                orig_idxs = np.where(labels != config.PAD_VAL)[0]
-                labels = labels[orig_idxs]
                 y_true_val.extend(labels.tolist())
-                y_pred_val.extend(preds.tolist())
+                y_pred_val.extend(preds)
 
 
         val_loss = total_loss / len(self.dev_dataloader)

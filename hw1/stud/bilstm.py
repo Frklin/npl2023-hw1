@@ -4,8 +4,11 @@ sys.path.append('hw1')
 import torch
 import torch.nn as nn
 import config
-from crf import CRF
+# from crf import CRF
+from torchcrf import CRF
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+
+
 
 class BiLSTM(nn.Module):
     def __init__(self, embeddings, label_count, device, hidden_size=config.HIDDEN_SIZE, lstm_layers=config.N_LSTMS, dropout=config.DROPRATE, classifier=config.CLASSIFIER):
@@ -17,7 +20,7 @@ class BiLSTM(nn.Module):
         self.device = device
 
         # LSTM
-        self.bilstm = nn.LSTM(embeddings.shape[1], hidden_size, num_layers=lstm_layers, bidirectional=True, batch_first=True)
+        self.bilstm = nn.LSTM(embeddings.shape[1] + config.POS_DIM, hidden_size, num_layers=lstm_layers, bidirectional=True, batch_first=True)
         self.hidden = None
         
         # Softmax
@@ -29,7 +32,7 @@ class BiLSTM(nn.Module):
         self.norm2 = nn.LayerNorm(hidden_size)
 
         # CRF
-        self.crf = CRF(label_count)
+        self.crf = CRF(label_count, batch_first=True)
 
     def init_hidden(self, batch_size):
         return (
@@ -38,9 +41,12 @@ class BiLSTM(nn.Module):
         )
     
 
-    def forward(self, tokens, token_lengths, mask=None, flag=1):
+    def forward(self, tokens, token_lengths, pos=None, mask=None):
         self.hidden = self.init_hidden(tokens.shape[0])
         x = self.embeddings(tokens)
+
+        if pos is not None:
+            x = torch.cat((x, pos), dim=-1)
 
         x = pack_padded_sequence(x, token_lengths, batch_first=True, enforce_sorted=False)
         x, self.hidden = self.bilstm(x, self.hidden)
@@ -54,21 +60,17 @@ class BiLSTM(nn.Module):
         x = self.dropout(x)
         x = self.linear2(x)
 
-        if self.classifier == 'CRF' and flag:
-            score, path = self.crf.decode(x, mask=mask)
-            return score, path
- 
         return x
 
-    def loss(self, x, y, token_lengths, mask=None):
-        emissions = self.forward(x, token_lengths, mask=mask, flag=0)
-        nll = self.crf(emissions, y, mask=mask)
+    def loss(self, x, y, token_lengths, pos=None, mask=None):
+        emissions = self.forward(x, token_lengths, pos=pos, mask=mask)
+        nll = -self.crf(emissions, y, mask=mask, reduction='token_mean')
         return nll
 
-    def decode(self, x, token_lengths, mask=None):
-        emissions = self.forward(x, token_lengths, mask=mask, flag=0)
-        score, preds = self.crf.decode(emissions, mask=mask)
-        return  score, preds
+    def decode(self, x, token_lengths,pos=None, mask=None):
+        emissions = self.forward(x, token_lengths, pos=pos,mask=mask)
+        preds = self.crf.decode(emissions, mask=mask)
+        return preds
 
 
 

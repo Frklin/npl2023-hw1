@@ -9,6 +9,7 @@ PAD_IDX                 = 0          # Padding index
 PAD_VAL                 = 11       # Padding value
 BOS                     = 12         # BOS index
 EOS                     = 13         # EOS index
+POS_DIM                 = 38         # POS dimension
 
 # LSTM
 EPOCHS                  = 30         # Number of epochs
