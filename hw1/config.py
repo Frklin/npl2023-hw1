@@ -12,6 +12,11 @@ EOS                     = 13         # EOS index
 POS                     = True       # Use POS tags
 POS_DIM                 = 38         # POS dimension
 
+# CHARACTERS
+CHAR                    = True       # Use character embeddings
+CHAR_DIM                = 50         # Character embeddings dimension
+CHAR_VOCAB_SIZE         = 400        # Character vocabulary size
+
 # LSTM
 EPOCHS                  = 30         # Number of epochs
 HIDDEN_SIZE             = 1024       # Size of the hidden layer

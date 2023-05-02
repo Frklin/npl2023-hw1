@@ -55,8 +55,9 @@ class Trainer:
 
         pbar = tqdm(self.train_dataloader, total=20000//config.BATCH_SIZE)
 
-        for idx, (tokens, labels, token_lengths, pos) in enumerate(pbar):
-            tokens, labels, pos = tokens.to(self.device), labels.to(self.device), pos.to(self.device) if config.POS else None
+        for tokens, labels, token_lengths, pos, chars in pbar:
+            tokens, labels = tokens.to(self.device), labels.to(self.device)
+            pos,chars = pos.to(self.device) if config.POS else None, chars.to(self.device) if config.CHAR else None
 
             if config.POS:
                 pos_vectors = torch.zeros((len(pos), torch.max(token_lengths), config.POS_DIM),dtype=torch.float32).to(self.device)
@@ -64,12 +65,22 @@ class Trainer:
                 for i, sen in enumerate(pos):
                     for j, tag in enumerate(sen):
                         pos_vectors[i][j] = F.one_hot(tag, num_classes=config.POS_DIM)
+            else:
+                pos_vectors = None
+
+            # if config.CHAR:
+            #     char_vectors = torch.zeros((len(chars), torch.max(token_lengths), config.CHAR_DIM),dtype=torch.float32).to(self.device)
+            #     for i, sen in enumerate(chars):
+            #         for j, tag in enumerate(sen):
+            #             char_vectors[i][j] = F.one_hot(tag, num_classes=config.CHAR_DIM)
+            # else:
+            #     char_vectors = None
 
             self.optimizer.zero_grad()
 
             if self.classifier == 'softmax':
 
-                logits = self.model(tokens, token_lengths, pos_vectors if config.POS else None)
+                logits = self.model(tokens, token_lengths, pos_vectors, chars)
 
                 loss = self.loss_function(logits.view(-1, logits.shape[-1]), labels.view(-1))
 
@@ -85,9 +96,9 @@ class Trainer:
                 mask = m.clone().detach().to(torch.uint8)
                 
                 self.model.zero_grad()
-                loss = self.model.loss(tokens, labels, token_lengths, pos_vectors if config.POS else None, mask)
+                loss = self.model.loss(tokens, labels, token_lengths, pos_vectors, chars, mask)
 
-                preds = self.model.decode(tokens,token_lengths, pos_vectors if config.POS else None, mask)
+                preds = self.model.decode(tokens,token_lengths, pos_vectors, chars, mask)
                 labels = labels.view(-1).cpu().numpy()
                 org_idxs = np.where(labels != config.PAD_VAL)[0]
                 labels = labels[org_idxs]
@@ -136,21 +147,41 @@ class Trainer:
         total_loss = 0
 
         with torch.no_grad():
-            for tokens, labels, token_lengths in tqdm(self.dev_dataloader):
+            for tokens, labels, token_lengths, pos, chars in tqdm(self.dev_dataloader):
                 tokens, labels = tokens.to(self.device), labels.to(self.device)
+                pos, chars = pos.to(self.device) if config.POS else None, chars.to(self.device) if config.CHAR else None
+
+                if config.POS:
+                    pos_vectors = torch.zeros((len(pos), torch.max(token_lengths), config.POS_DIM),dtype=torch.float32).to(self.device)
+                    
+                    for i, sen in enumerate(pos):
+                        for j, tag in enumerate(sen):
+                            pos_vectors[i][j] = F.one_hot(tag, num_classes=config.POS_DIM)
+                else:
+                    pos_vectors = None
+
+                if config.CHAR:
+                    char_vectors = torch.zeros((len(chars), torch.max(token_lengths), config.CHAR_DIM),dtype=torch.float32).to(self.device)
+                    for i, sen in enumerate(chars):
+                        for j, tag in enumerate(sen):
+                            char_vectors[i][j] = F.one_hot(tag, num_classes=config.CHAR_DIM)
+                else:
+                    char_vectors = None
+
+
                 if self.classifier == 'crf':
                     m = (labels != config.PAD_VAL)
                     mask = m.clone().detach().to(torch.uint8)
-                    loss = self.model.loss(tokens, labels, token_lengths, mask)
+                    loss = self.model.loss(tokens, labels, token_lengths, pos_vectors, char_vectors, mask)
 
-                    preds = self.model.decode(tokens,token_lengths, mask)
+                    preds = self.model.decode(tokens,token_lengths, pos_vectors, char_vectors, mask)
                     labels = labels.view(-1).cpu().numpy()
                     org_idxs = np.where(labels != config.PAD_VAL)[0]
                     labels = labels[org_idxs]
                     preds = sum(preds, [])
 
                 elif self.classifier == 'softmax':
-                    logits = self.model(tokens, token_lengths)
+                    logits = self.model(tokens, token_lengths, pos_vectors, char_vectors)
                     loss = self.loss_function(logits.view(-1, logits.shape[-1]), labels.view(-1))
                     preds = logits.argmax(dim=-1).view(-1).cpu().numpy()
                     labels = labels.view(-1).cpu().numpy()

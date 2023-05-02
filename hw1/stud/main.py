@@ -22,16 +22,13 @@ def main():
     seed_everything(config.SEED)
     
     embeddings, word2idx = load_embeddings()
-    
-    print("Embeddings shape: ", embeddings.shape)
-    print("Word2idx length: ", len(word2idx))
 
     label2idx = {"O": 0, "B-SENTIMENT": 1, "I-SENTIMENT": 2, "B-CHANGE": 3, "I-CHANGE": 4, "B-ACTION": 5, "I-ACTION": 6, "B-SCENARIO": 7, "I-SCENARIO": 8, "B-POSSESSION": 9, "I-POSSESSION": 10, config.PAD_TOKEN : config.PAD_VAL}
     idx2label = {v: k for k, v in label2idx.items()}
 
     pos2idx = {config.PAD_TOKEN: config.PAD_IDX, "CC" : 1, "CD" : 2, "DT" : 3, "EX" : 4, "FW" : 5, "IN" : 6, "JJ" : 7, "JJR" : 8, "JJS" : 9, "LS" : 10, "MD" : 11, "NN" : 12, "NNS" : 13, "NNP" : 14, "NNPS" : 15, "PDT" : 16, "POS" : 17, "PRP" : 18, "PRP$" : 19, "RB" : 20, "RBR" : 21, "RBS" : 22, "RP" : 23, "SYM" : 24, "TO" : 25, "UH" : 26, "VB" : 27, "VBD" : 28, "VBG" : 29, "VBN" : 30, "VBP" : 31, "VBZ" : 32, "WDT" : 33, "WP" : 34, "WP$" : 35, "WRB" : 36}
-
-    char2idx = {config.PAD_TOKEN: config.PAD_VAL, config.UNK_TOKEN: 1, "a" : 1} 
+    
+    char2idx = {config.PAD_TOKEN: config.PAD_VAL, config.UNK_TOKEN: 1, "a" : 1, "b" : 2} 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     train_dataset = MyDataset(config.TRAIN_PATH, word2idx, label2idx, pos2idx, char2idx)
