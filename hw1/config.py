@@ -6,9 +6,10 @@ NEGATIVE_SAMPLES        = 5          # Negative samples for each word
 UNK_TOKEN               = "<UNK>"    # Unknown token
 PAD_TOKEN               = "<PAD>"    # Padding token
 PAD_IDX                 = 0          # Padding index
-PAD_VAL                 = 11       # Padding value
+PAD_VAL                 = 11         # Padding value
 BOS                     = 12         # BOS index
 EOS                     = 13         # EOS index
+POS                     = True       # Use POS tags
 POS_DIM                 = 38         # POS dimension
 
 # LSTM

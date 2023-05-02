@@ -43,7 +43,7 @@ class Trainer:
         #Early stopping
         self.val_losses = []
         self.best_val_loss = float('inf')
-        self.patience = 1  
+        self.patience = 7  
         self.epochs_without_improvement = 0
 
 
@@ -56,19 +56,20 @@ class Trainer:
         pbar = tqdm(self.train_dataloader, total=20000//config.BATCH_SIZE)
 
         for idx, (tokens, labels, token_lengths, pos) in enumerate(pbar):
-            tokens, labels, pos = tokens.to(self.device), labels.to(self.device), pos.to(self.device)
+            tokens, labels, pos = tokens.to(self.device), labels.to(self.device), pos.to(self.device) if config.POS else None
 
-            pos_vectors = torch.zeros((len(pos), torch.max(token_lengths), config.POS_DIM),dtype=torch.float32).to(self.device)
-            
-            for i, sen in enumerate(pos):
-                for j, tag in enumerate(sen):
-                    pos_vectors[i][j] = F.one_hot(tag, num_classes=config.POS_DIM)
-                    
+            if config.POS:
+                pos_vectors = torch.zeros((len(pos), torch.max(token_lengths), config.POS_DIM),dtype=torch.float32).to(self.device)
+                
+                for i, sen in enumerate(pos):
+                    for j, tag in enumerate(sen):
+                        pos_vectors[i][j] = F.one_hot(tag, num_classes=config.POS_DIM)
+
             self.optimizer.zero_grad()
 
             if self.classifier == 'softmax':
 
-                logits = self.model(tokens, token_lengths, pos_vectors)
+                logits = self.model(tokens, token_lengths, pos_vectors if config.POS else None)
 
                 loss = self.loss_function(logits.view(-1, logits.shape[-1]), labels.view(-1))
 
@@ -84,9 +85,9 @@ class Trainer:
                 mask = m.clone().detach().to(torch.uint8)
                 
                 self.model.zero_grad()
-                loss = self.model.loss(tokens, labels, token_lengths, pos_vectors, mask)
+                loss = self.model.loss(tokens, labels, token_lengths, pos_vectors if config.POS else None, mask)
 
-                preds = self.model.decode(tokens,token_lengths, pos_vectors, mask)
+                preds = self.model.decode(tokens,token_lengths, pos_vectors if config.POS else None, mask)
                 labels = labels.view(-1).cpu().numpy()
                 org_idxs = np.where(labels != config.PAD_VAL)[0]
                 labels = labels[org_idxs]

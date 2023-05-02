@@ -27,12 +27,13 @@ def collate_fn(batch):
 
     padded_tokens = [t + [config.PAD_IDX] * (max_length - len(t)) for t in tokens]
     padded_labels = [l + [config.PAD_VAL] * (max_length - len(l)) for l in labels]
-    padded_pos = [p + [config.PAD_IDX] * (max_length - len(p)) for p in pos]
+    padded_pos = [p + [config.PAD_IDX] * (max_length - len(p)) for p in pos] 
+
 
     tokens_tensor = torch.LongTensor(padded_tokens)
     labels_tensor = torch.LongTensor(padded_labels)
     lengths_tensor = torch.LongTensor(token_lengths)
-    pos_tensor = torch.LongTensor(padded_pos)
+    pos_tensor = torch.LongTensor(padded_pos) if config.POS else None
     # pad_index = 0
 
     # return sentences_pad, labels_pad, lengths_tensor
