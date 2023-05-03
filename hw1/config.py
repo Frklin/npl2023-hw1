@@ -1,4 +1,7 @@
 import torch
+import nltk
+nltk.download('tagsets')
+
 # EMBEDDINGS
 EMBEDDING_MODEL         = "GenGlove" # "GenW2V", "GenGlove", "Fasttext"
 EMBEDDING_SIZE          = 300        # Size of the embedding vector
@@ -43,9 +46,13 @@ SAVE_PATH          = "./model/"
 # SEED
 SEED                    = 42
 
-DEVICE                  = "cuda" if torch.cuda.is_available() else "cpu"
+DEVICE                  = "cpu"# "cuda" if torch.cuda.is_available() else "cpu"
 
 
+pos2idx = {x : idx + 1 for idx, x in enumerate(nltk.load('help/tagsets/upenn_tagset.pickle').keys())}
+pos2idx[PAD_TOKEN] = PAD_IDX
+pos2idx['#'] = len(pos2idx)
 
 
-
+label2idx = {"O": 0, "B-SENTIMENT": 1, "I-SENTIMENT": 2, "B-CHANGE": 3, "I-CHANGE": 4, "B-ACTION": 5, "I-ACTION": 6, "B-SCENARIO": 7, "I-SCENARIO": 8, "B-POSSESSION": 9, "I-POSSESSION": 10, PAD_TOKEN : PAD_VAL}
+idx2label = {v: k for k, v in label2idx.items()}
