@@ -32,12 +32,11 @@ class BiLSTM(nn.Module):
         
         # Softmax
         self.relu = nn.ReLU()
-        self.linear = nn.Linear(hidden_size * 2, hidden_size)
+        self.linear = nn.Linear(hidden_size, hidden_size)
         self.linear2 = nn.Linear(hidden_size, label_count)
         self.dropout = VariationalDropout(dropout)  
-        self.norm1 = nn.LayerNorm(hidden_size * 2)
+        self.norm1 = nn.LayerNorm(hidden_size)
         self.norm2 = nn.LayerNorm(hidden_size)
-        self.softmax = nn.Softmax(dim=-1)
 
         # CRF
         self.crf = CRF(label_count, batch_first=True)
@@ -74,15 +73,14 @@ class BiLSTM(nn.Module):
         x = pack_padded_sequence(x, token_lengths, batch_first=True, enforce_sorted=False)
         x, self.hidden = self.bilstm(x, self.hidden)
         x, _ = pad_packed_sequence(x, batch_first=True)
-        # x = self.norm1(x)
-        # x = self.relu(x)
-        # x = self.dropout(x)
-        # x = self.linear(x)
-        # x = self.norm2(x)
-        # x = self.relu(x)
-        # x = self.dropout(x)
+        x = self.norm1(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.linear(x)
+        x = self.norm2(x)
+        x = self.relu(x)
+        x = self.dropout(x)
         x = self.linear2(x)
-        # x = self.softmax(x)
         
 
         return x

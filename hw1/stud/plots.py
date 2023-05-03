@@ -84,3 +84,29 @@ def plot_hiddensize_comparison():
     plt.ylabel("F1-score")
     plt.legend()
     plt.show()
+
+def plot_classifiers_comparison():
+    api = wandb.Api()
+    runs = api.runs("nlp_stats")
+    data = []
+
+    for run in runs:
+        if run.name[:2] != 'CF':  
+            continue
+        data.append({
+            'classifier': run.config['classifier'],
+            'learning_rate': run.config['learning_rate'],
+            'val_f1_score': run.summary['val_f1_score']
+        })
+
+    df = pd.DataFrame(data)
+
+    sns.set(style="whitegrid")
+    sns.violinplot(x='classifier', y='val_f1_score', data=df, inner="quartile", split=True)
+    plt.title("Classifiers Comparison")
+    plt.show()
+
+
+plot_classifiers_comparison()
+# plot_hiddensize_comparison()
+plot_optimizers_comparison()

@@ -8,7 +8,7 @@ import numpy as np
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score
 from tqdm.auto import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-# import wandb
+import wandb
 
 
 
@@ -120,17 +120,11 @@ class Trainer:
         train_precision = precision_score(y_true_train, y_pred_train, average='weighted')
         train_recall = recall_score(y_true_train, y_pred_train, average='weighted')
 
-        # wandb.log({
-        #     "train_loss": train_loss,
-        #     "train_accuracy": train_accuracy,
-        #     "train_f1_score": train_f1,
-        #     "train_precision": train_precision,
-        #     "train_recall": train_recall
-        # })
 
 
 
-        return train_loss, train_accuracy, train_f1
+
+        return train_loss, train_accuracy, train_f1, train_precision, train_recall
 
     def evaluate(self):
         self.model.eval()
@@ -185,35 +179,44 @@ class Trainer:
         val_precision = precision_score(y_true_val, y_pred_val, average='weighted')
         val_recall = recall_score(y_true_val, y_pred_val, average='weighted')
 
-        # wandb.log({
-        #     "val_loss": val_loss,
-        #     "val_accuracy": val_accuracy,
-        #     "val_f1_score": val_f1,
-        #     "val_precision": val_precision,
-        #     "val_recall": val_recall
-        # })
 
-
-        return val_loss, val_accuracy, val_f1
+        return val_loss, val_accuracy, val_f1, val_precision, val_recall
 
     def train(self, num_epochs):
+        best_f1 = 0
         schedluer = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=2, verbose=True)
         for epoch in range(num_epochs):
-            train_loss, train_accuracy, train_f1 = self.train_epoch()
-            dev_loss, dev_accuracy, dev_f1 = self.evaluate()
+            train_loss, train_accuracy, train_f1, train_precision, train_recall = self.train_epoch()
+            dev_loss, dev_accuracy, dev_f1, dev_precision, dev_recall = self.evaluate()
             print(f"Epoch {epoch} train_loss: {train_loss}, train_accuracy: {train_accuracy}, train_F1-score: {train_f1}")
             print(f"Epoch {epoch} val_loss: {dev_loss}, val_accuracy: {dev_accuracy}, val_F1-score: {dev_f1}")
-
+            wandb.log({
+                "train_loss": train_loss,
+                "train_accuracy": train_accuracy,
+                "train_f1_score": train_f1,
+                "train_precision": train_precision,
+                "train_recall": train_recall,
+                "val_loss": dev_loss,
+                "val_accuracy": dev_accuracy,
+                "val_f1_score": dev_f1,
+                "val_precision": dev_precision,
+                "val_recall": dev_recall
+            })
             schedluer.step(dev_loss)
 
             if dev_loss < self.best_val_loss:
+                best_f1 = dev_f1
                 self.best_val_loss = dev_loss
+                torch.save(self.model, config.MODEL_PATH)
+                print(f"Saving model at epoch {epoch+1} with validation loss: {self.best_val_loss}.")
                 self.epochs_without_improvement = 0
 
             else:
                 self.epochs_without_improvement += 1
 
             if self.epochs_without_improvement >= self.patience:
+                dev_loss = self.best_val_loss
+                dev_f1 = best_f1
                 print(f"Early stopping at epoch {epoch+1}. Best validation loss: {self.best_val_loss}.")
                 break
 

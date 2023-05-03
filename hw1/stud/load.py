@@ -3,7 +3,7 @@ from torch.utils.data import Dataset, DataLoader
 import jsonlines
 import config
 import numpy as np
-from hw1.stud.utils import preprocess_sentence
+from utils import preprocess_sentence
 import nltk
 from nltk.tag import pos_tag
 from torch.nn.utils.rnn import pad_sequence
@@ -39,7 +39,7 @@ class MyDataset(Dataset):
                 if config.POS:
                     pos = pos_tag(tokens)
                     pos = [tag[1] for tag in pos]
-                    self.pos_tags.append([self.pos2idx.get(tag, 37) for tag in pos])
+                    self.pos_tags.append([self.pos2idx[tag] for tag in pos])
 
     def __len__(self):
         return len(self.data)

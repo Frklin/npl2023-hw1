@@ -1,5 +1,5 @@
 import numpy as np
-import hw1.config as config
+import config as config
 import torch
 from gensim.models import KeyedVectors
 import gensim.downloader as api
