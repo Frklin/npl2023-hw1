@@ -30,18 +30,14 @@ def load_embeddings(embedding_path: str = config.EMBEDDINGS_PATH, embedding_type
 
     word2idx['<PAD>'] = config.PAD_IDX
     word2idx['<UNK>'] = len(word2idx)-1
+    word2idx['the'] = 40000
     
-
-    # embeddings[config.PAD_IDX] = np.zeros((1, emb_file.vector_size), dtype=np.float32)
-    embeddings = np.append(embeddings, np.zeros((1, emb_file.vector_size), dtype=np.float32), axis=0)
+    embeddings[40000] = embeddings[0]
+    embeddings[config.PAD_IDX] = np.zeros((1, emb_file.vector_size), dtype=np.float32)
+    # embeddings = np.append(embeddings, np.zeros((1, emb_file.vector_size), dtype=np.float32), axis=0)
     embeddings = np.append(embeddings, np.random.rand(1, emb_file.vector_size).astype(np.float32), axis=0)
     
     return torch.tensor(embeddings, dtype=torch.float32), word2idx
 
-
-
-class Word2Vec:
-    def __init__(self) -> None:
-        pass
 
 

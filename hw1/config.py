@@ -15,7 +15,8 @@ POS_DIM                 = 38         # POS dimension
 # CHARACTERS
 CHAR                    = True       # Use character embeddings
 CHAR_DIM                = 50         # Character embeddings dimension
-CHAR_VOCAB_SIZE         = 400        # Character vocabulary size
+CHAR_VOCAB_SIZE         = 230        # Character vocabulary size
+CNN_FILTERS             = 30        # Number of filters
 
 # LSTM
 EPOCHS                  = 30         # Number of epochs
@@ -27,6 +28,7 @@ DROPRATE                = 0.5        # Dropout rate
 CLASSIFIER              = 'crf'  # 'softmax' or 'crf'
 OPTIMIZER               = 'adam'     # 'adam', 'nadam', sgd', 'adagrad'
 WEIGHT_DECAY            = 1e-5       # Weight decay
+CLIP                    = 0          # Gradient clipping
 
 # OS PATHS
 ROOT                    = './data'
@@ -35,6 +37,7 @@ VAL_PATH                = ROOT + '/dev.jsonl'
 TEST_PATH               = ROOT + '/test.jsonl'
 
 EMBEDDINGS_PATH    = "./hw1/stud/EmbModels/" + EMBEDDING_MODEL
+SAVE_PATH          = "./model/"
 
 # SEED
 SEED                    = 42

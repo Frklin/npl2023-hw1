@@ -33,7 +33,7 @@ class MyDataset(Dataset):
                 if config.CHAR: 
                     char_sent = []
                     for token in tokens:
-                        char_sent.append([ord(char) for char in token])
+                        char_sent.append([ord(char) if ord(char)<199 else 200 for char in token])
                     self.chars.append(char_sent)
 
                 if config.POS:
@@ -46,13 +46,8 @@ class MyDataset(Dataset):
     
     def __getitem__(self, idx):
         tokens, labels = self.data[idx]
-        max_length = max([len(token) for token in tokens])
 
         chars = self.chars[idx] if config.CHAR else None
-        # if config.CHAR:
-        #     chars = [char + [config.PAD_IDX]*(max_length-len(char)) for char in chars]
-        #     char = torch.LongTensor(chars)
-        #     print(char.shape)
         tokens  = [self.word2idx.get(token, self.word2idx[config.UNK_TOKEN]) for token in tokens]
         labels = [self.label2idx[label] for label in labels]
         pos = self.pos_tags[idx] if config.POS else None

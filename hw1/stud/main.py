@@ -12,6 +12,7 @@ from utils import seed_everything, collate_fn
 from torch.utils.data import Dataset, DataLoader
 import torch.optim as optim
 from model import Trainer
+# import wandb
 
 # import wandb
 
@@ -37,9 +38,9 @@ def main():
 
     print("Train dataset length: ", len(train_dataset))
 
-    train_loader = DataLoader(train_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn)
-    val_loader = DataLoader(val_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn)
-    test_loader = DataLoader(test_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn)
+    train_loader = DataLoader(train_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn, shuffle=True)
 
     model_name = config.EMBEDDING_MODEL + "_" + ("" if config.N_LSTMS == 1 else "Bi-" if config.N_LSTMS == 2 else "Tri-") + "LSTM_" + config.CLASSIFIER + "_" + config.OPTIMIZER + "_" + str(config.LEARNING_RATE) + "LR_" + str(config.DROPRATE) + "DP" 
     print(model_name)
@@ -59,26 +60,93 @@ def main():
     #   "batch_size": batch_size
     #   })
 
+    optimizers_settings = {
+    'Adam': {'class': optim.Adam, 'params': {'betas': (0.9, 0.999), 'eps': 1e-08, 'weight_decay' :  config.WEIGHT_DECAY}},
+    'Nadam': {'class': optim.Adam, 'params': {'betas': (0.9, 0.999), 'eps': 1e-08, 'weight_decay' : config.WEIGHT_DECAY, 'amsgrad': True}},
+    'Adadelta': {'class': optim.Adadelta, 'params': {'rho': 0.9, 'eps': 1e-06, 'weight_decay' : config.WEIGHT_DECAY}},
+    'SGD': {'class': optim.SGD, 'params': {'momentum': 0.9, 'weight_decay' : config.WEIGHT_DECAY}}
+}
+    lrs = [1e-2,1e-3,5e-4,1e-4]
+    for opt_name, opt_setting in optimizers_settings.items():
+        for lr in lrs:
+            model = BiLSTM(embeddings, len(label2idx), device=device)
+            # wandb.watch(model, log="all")
+            optimizer_class = opt_setting['class']
+            optimizer_params = {**opt_setting['params'], 'lr': lr}
+            optimizer = optimizer_class(model.parameters(), **optimizer_params)
+            loss_function = nn.CrossEntropyLoss(ignore_index=label2idx[config.PAD_TOKEN])
 
-    model = BiLSTM(embeddings, len(label2idx), device=device)
-    # wandb.watch(model)
+            trainer = Trainer(model, train_loader, val_loader, optimizer, loss_function, device)
+            trainer.train(20)
+            # wandb.finish()
+            torch.save(model.state_dict(),  f"{config.SAVE_PATH}/{model_name}.pth")
+#     model = BiLSTM(embeddings, len(label2idx), device=device)
+#     # wandb.watch(model)
 
-    if config.OPTIMIZER == 'adam':
-        optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
-    elif config.OPTIMIZER == 'nadam':
-        optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY, amsgrad=True)
-    elif config.OPTIMIZER == 'sgd':
-        optimizer = optim.SGD(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
-    else:
-        optimizer = optim.Adagrad(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
+#     if config.OPTIMIZER == 'adam':
+#         optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
+#     elif config.OPTIMIZER == 'nadam':
+#         optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY, amsgrad=True)
+#     elif config.OPTIMIZER == 'sgd':
+#         optimizer = optim.SGD(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
+#     else:
+#         optimizer = optim.Adagrad(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
 
-    loss_function = nn.CrossEntropyLoss(ignore_index=label2idx[config.PAD_TOKEN])
+#     loss_function = nn.CrossEntropyLoss(ignore_index=label2idx[config.PAD_TOKEN])
 
-# model, train_dataloader, dev_dataloader, optimizer, loss_function, device ,clip, classifier = 'softmax'):
-    trainer = Trainer(model, train_loader, val_loader, optimizer, loss_function, device)
-    trainer.train(config.EPOCHS)
+    #     trainer = Trainer(model, train_loader, val_loader, optimizer, loss_function, device)
+#     trainer.train(config.EPOCHS)
 
     # torch.save(model.state_dict(), 'event_detection_model.pth')
+
+
+
+
+
+
+# def run_epochs(name, label2idx, embeddings_model, lstm_layers, hidden_size, classifier, opt, batch_size, lr, dropout, weight_decay , clip, device):
+#     lstm_name = ("" if lstm_layers == 1 else "Bi-" if lstm_layers == 2 else "Tri-") + "LSTM"
+#     if config.CHAR:
+#       lstm_name += "-CNN"
+#     if classifier == "crf":
+#       lstm_name += "-CRF"
+#     if config.POS:
+#       lstm_name += "-(POS)"
+#     model_name = '_'.join([name + "-" + embeddings_model, lstm_name, str(hidden_size)+"HL", opt, str(batch_size)+"BS", str(round(lr,4))+"LR", str(round(dropout,1)) + "DR"])
+#     # model_name = "EMB"+emb + "_" + lstm_name + "_" + str(lstm_units) + "_" +  "HL_" + "Softmax_" + "Adam_" +str(batch_size)+"BS_" + str(round(lr,4))+"LR_"+ str(round(dropout,1)) + "DR" 
+#     wandb.init(project='nlp_stats',
+#                         name=model_name,        
+#                       config={
+#                           "embeddings": embeddings_model,
+#                           "model": model_name,
+#                           "classifier": classifier,
+#                           "hidden_layer": hidden_size,
+#                           "POS": config.POS,
+#                           "optimizer": opt,
+#                           "batch_size": batch_size,
+#                           "learning_rate": lr,
+#                           "droprate": dropout
+#                           })
+
+#     model = BiLSTM(embeddings, len(label2idx), device, hidden_size, lstm_layers, dropout, classifier)
+    
+#     if opt == 'adam':
+#         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+#     elif opt == 'nadam':
+#         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True)
+#     elif opt == 'sgd':
+#         optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay)
+#     else:
+#         optimizer = optim.Adagrad(model.parameters(), lr=lr, weight_decay=weight_decay)
+
+
+#     loss_function = nn.CrossEntropyLoss(ignore_index=label2idx['<PAD>'])
+#     wandb.watch(model, log="all")
+
+#     trainer = Trainer(model, train_dataloader, dev_dataloader, optimizer, loss_function, device, clip, classifier)
+#     trainer.train(num_epochs)
+#     wandb.finish()
+#     torch.save(model.state_dict(), f"{SAVE_FOLDER}/{round(dev_f1,2)}-{round(dev_loss,2)}-{model_name}.pth")
 
 
 

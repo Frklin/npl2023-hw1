@@ -37,11 +37,7 @@ def collate_fn(batch):
     lengths_tensor = torch.LongTensor(token_lengths)
     pos_tensor = torch.LongTensor(padded_pos) if config.POS else None
     char_tensor = torch.LongTensor(padded_chars) if config.CHAR else None
-
-    # pad_index = 0
-
-    # return sentences_pad, labels_pad, lengths_tensor
-
+    
     return tokens_tensor, labels_tensor, lengths_tensor, pos_tensor, char_tensor
 
 nltk.download('punkt')

@@ -18,7 +18,7 @@ class BiLSTM(nn.Module):
         self.classifier = classifier
         self.hidden_dim = hidden_size // 2
         self.device = device
-        self.n_filters = 30
+        self.n_filters = config.CNN_FILTERS
         # compute embedding dimension with char embeddings and pos tags if applicable
         self.embed_dim = config.EMBEDDING_SIZE
         if config.CHAR:
@@ -57,21 +57,19 @@ class BiLSTM(nn.Module):
     def forward(self, tokens, token_lengths, pos=None, chars=None, mask=None):
         self.hidden = self.init_hidden(tokens.shape[0])
         x = self.embeddings(tokens)
+        
         if config.CHAR:
             chars = chars.view(-1, chars.shape[-1])
             char_embs = self.char_embeddings(chars)
-            # char_embs = char_embs.permute(0, 1, 3, 2)
             char_embs = torch.einsum('ijk->ikj', char_embs)
             char_cnn = self.relu(self.conv1(char_embs))
             char_cnn = self.maxpool1(char_cnn)
             char_cnn = torch.max(char_cnn, 2)[0]
             char_cnn = char_cnn.view(tokens.shape[0], tokens.shape[1], -1)
             x = torch.cat((x, char_cnn), dim=2)
-            print(x.shape)
+
         if config.POS:
             x = torch.cat((x, pos), dim=-1)
-            print(x.shape)
-        print(x.shape)
 
         x = pack_padded_sequence(x, token_lengths, batch_first=True, enforce_sorted=False)
         x, self.hidden = self.bilstm(x, self.hidden)

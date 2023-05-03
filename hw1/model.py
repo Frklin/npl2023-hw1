@@ -7,6 +7,8 @@ import config
 import numpy as np
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score
 from tqdm.auto import tqdm
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+# import wandb
 
 
 
@@ -29,7 +31,7 @@ class Model:
 
 
 class Trainer:
-    def __init__(self, model, train_dataloader, dev_dataloader, optimizer, loss_function, device ,clip = False, classifier = config.CLASSIFIER):
+    def __init__(self, model, train_dataloader, dev_dataloader, optimizer, loss_function, device ,clip = 0, classifier = config.CLASSIFIER):
         self.model = model.to(device)
         self.train_dataloader = train_dataloader
         self.dev_dataloader = dev_dataloader
@@ -68,14 +70,6 @@ class Trainer:
             else:
                 pos_vectors = None
 
-            # if config.CHAR:
-            #     char_vectors = torch.zeros((len(chars), torch.max(token_lengths), config.CHAR_DIM),dtype=torch.float32).to(self.device)
-            #     for i, sen in enumerate(chars):
-            #         for j, tag in enumerate(sen):
-            #             char_vectors[i][j] = F.one_hot(tag, num_classes=config.CHAR_DIM)
-            # else:
-            #     char_vectors = None
-
             self.optimizer.zero_grad()
 
             if self.classifier == 'softmax':
@@ -106,15 +100,13 @@ class Trainer:
 
             else:
                 raise NotImplementedError
-
-            # nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
+            
+            if self.clip != 0:
+                nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
             
             loss.backward()
             self.optimizer.step()
 
-            # preds = preds[labels != config.PAD_VAL]
-
-            # labels = labels[labels != config.PAD_VAL]
             y_true_train.extend(labels.tolist())
             y_pred_train.extend(preds)
 
@@ -132,8 +124,8 @@ class Trainer:
         #     "train_loss": train_loss,
         #     "train_accuracy": train_accuracy,
         #     "train_f1_score": train_f1,
-        #     # "train_precision": train_precision,
-        #     # "train_recall": train_recall
+        #     "train_precision": train_precision,
+        #     "train_recall": train_recall
         # })
 
 
@@ -160,28 +152,20 @@ class Trainer:
                 else:
                     pos_vectors = None
 
-                if config.CHAR:
-                    char_vectors = torch.zeros((len(chars), torch.max(token_lengths), config.CHAR_DIM),dtype=torch.float32).to(self.device)
-                    for i, sen in enumerate(chars):
-                        for j, tag in enumerate(sen):
-                            char_vectors[i][j] = F.one_hot(tag, num_classes=config.CHAR_DIM)
-                else:
-                    char_vectors = None
-
 
                 if self.classifier == 'crf':
                     m = (labels != config.PAD_VAL)
                     mask = m.clone().detach().to(torch.uint8)
-                    loss = self.model.loss(tokens, labels, token_lengths, pos_vectors, char_vectors, mask)
+                    loss = self.model.loss(tokens, labels, token_lengths, pos_vectors, chars, mask)
 
-                    preds = self.model.decode(tokens,token_lengths, pos_vectors, char_vectors, mask)
+                    preds = self.model.decode(tokens,token_lengths, pos_vectors, chars, mask)
                     labels = labels.view(-1).cpu().numpy()
                     org_idxs = np.where(labels != config.PAD_VAL)[0]
                     labels = labels[org_idxs]
                     preds = sum(preds, [])
 
                 elif self.classifier == 'softmax':
-                    logits = self.model(tokens, token_lengths, pos_vectors, char_vectors)
+                    logits = self.model(tokens, token_lengths, pos_vectors, chars)
                     loss = self.loss_function(logits.view(-1, logits.shape[-1]), labels.view(-1))
                     preds = logits.argmax(dim=-1).view(-1).cpu().numpy()
                     labels = labels.view(-1).cpu().numpy()
@@ -205,40 +189,32 @@ class Trainer:
         #     "val_loss": val_loss,
         #     "val_accuracy": val_accuracy,
         #     "val_f1_score": val_f1,
-        #     # "val_precision": val_precision,
-        #     # "val_recall": val_recall
+        #     "val_precision": val_precision,
+        #     "val_recall": val_recall
         # })
 
 
         return val_loss, val_accuracy, val_f1
 
     def train(self, num_epochs):
+        schedluer = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=2, verbose=True)
         for epoch in range(num_epochs):
             train_loss, train_accuracy, train_f1 = self.train_epoch()
             dev_loss, dev_accuracy, dev_f1 = self.evaluate()
             print(f"Epoch {epoch} train_loss: {train_loss}, train_accuracy: {train_accuracy}, train_F1-score: {train_f1}")
             print(f"Epoch {epoch} val_loss: {dev_loss}, val_accuracy: {dev_accuracy}, val_F1-score: {dev_f1}")
 
-            if dev_loss < self.best_val_loss +0.01 :
+            schedluer.step(dev_loss)
+
+            if dev_loss < self.best_val_loss:
                 self.best_val_loss = dev_loss
                 self.epochs_without_improvement = 0
-                # Save the best model if desired
+
             else:
                 self.epochs_without_improvement += 1
 
-            if self.epochs_without_improvement >= self.patience or (epoch == 2 and dev_f1 < 0.3):
+            if self.epochs_without_improvement >= self.patience:
                 print(f"Early stopping at epoch {epoch+1}. Best validation loss: {self.best_val_loss}.")
                 break
 
 
-    # def predict(self, batch):
-    #     self.model.eval()
-    #     y_pred_test = []
-    #     with torch.no_grad():
-    #         for tokens, labels, token_lengths in tqdm(batch):
-    #             tokens, labels = tokens.to(self.device), labels.to(self.device)
-    #             logits = self.model(tokens, token_lengths)
-    #             preds = logits.argmax(dim=-1).view(-1).cpu().numpy()
-    #             y_pred_test.extend(preds.tolist())
-    #             torch.cuda.empty_cache()
-    #     return y_pred_test
