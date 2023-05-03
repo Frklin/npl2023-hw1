@@ -44,21 +44,20 @@ def main():
 
     model_name = config.EMBEDDING_MODEL + "_" + ("" if config.N_LSTMS == 1 else "Bi-" if config.N_LSTMS == 2 else "Tri-") + "LSTM_" + config.CLASSIFIER + "_" + config.OPTIMIZER + "_" + str(config.LEARNING_RATE) + "LR_" + str(config.DROPRATE) + "DP" 
     print(model_name)
-    # wandb.init(
-    #   # Set the project where this run will be logged
-    #   project="nlp-event-detection",
-    #   name=model_name,
-    #   # Track hyperparameters and run metadata
-    #   config={
-    #   "embeddings": "GensimW2V",
-    #   "# LSTM": lstm_layers,
-    #   "hidden_layer": lstm_units,
-    #   "classifier": "Linear",
-    #   "learning_rate": lr,
-    #   "optimizer": "Adam",
-    #   "droprate": dropout,
-    #   "batch_size": batch_size
-    #   })
+    # wandb.init(project='nlp_stats',
+    #                     name=model_name,        
+    #                   config={
+    #                       "embeddings": config.EMBEDDING_MODEL,
+    #                       "model": model_name,
+    #                       "classifier": config.CLASSIFIER,
+    #                       "hidden_layer": config.HIDDEN_LAYER,
+    #                       "POS": config.POS,
+    #                       "optimizer": opt_name,
+    #                       "batch_size": config.BATCH_SIZE,
+    #                       "learning_rate": lr,
+    #                       "droprate": config.DROPRATE
+    #                       })
+
 
     optimizers_settings = {
     'Adam': {'class': optim.Adam, 'params': {'betas': (0.9, 0.999), 'eps': 1e-08, 'weight_decay' :  config.WEIGHT_DECAY}},
@@ -69,8 +68,21 @@ def main():
     lrs = [1e-2,1e-3,5e-4,1e-4]
     for opt_name, opt_setting in optimizers_settings.items():
         for lr in lrs:
+            wandb.init(project='nlp_stats',
+                        name=model_name,        
+                      config={
+                          "embeddings": config.EMBEDDING_MODEL,
+                          "model": model_name,
+                          "classifier": config.CLASSIFIER,
+                          "hidden_layer": config.HIDDEN_LAYER,
+                          "POS": config.POS,
+                          "optimizer": opt_name,
+                          "batch_size": config.BATCH_SIZE,
+                          "learning_rate": lr,
+                          "droprate": config.DROPRATE
+                          })
             model = BiLSTM(embeddings, len(label2idx), device=device)
-            # wandb.watch(model, log="all")
+            wandb.watch(model, log="all")
             optimizer_class = opt_setting['class']
             optimizer_params = {**opt_setting['params'], 'lr': lr}
             optimizer = optimizer_class(model.parameters(), **optimizer_params)
@@ -78,7 +90,7 @@ def main():
 
             trainer = Trainer(model, train_loader, val_loader, optimizer, loss_function, device)
             trainer.train(20)
-            # wandb.finish()
+            wandb.finish()
             torch.save(model.state_dict(),  f"{config.SAVE_PATH}/{model_name}.pth")
 #     model = BiLSTM(embeddings, len(label2idx), device=device)
 #     # wandb.watch(model)
