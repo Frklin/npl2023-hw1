@@ -186,6 +186,9 @@ class Trainer:
         best_f1 = 0
         schedluer = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=2, verbose=True)
         for epoch in range(num_epochs):
+            if epoch >= config.UNFREEZE_EPOCH:
+                self.model.unfreeze()
+                print("Unfreezing the model")
             train_loss, train_accuracy, train_f1, train_precision, train_recall = self.train_epoch()
             dev_loss, dev_accuracy, dev_f1, dev_precision, dev_recall = self.evaluate()
             print(f"Epoch {epoch} train_loss: {train_loss}, train_accuracy: {train_accuracy}, train_F1-score: {train_f1}")

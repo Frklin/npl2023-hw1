@@ -28,11 +28,11 @@ BATCH_SIZE              = 64         # Size of the batch
 N_LSTMS                 = 2          # Number of LSTM layers
 LEARNING_RATE           = 1e-4       # Learning rate
 DROPRATE                = 0.5        # Dropout rate
-CLASSIFIER              = 'crf'  # 'softmax' or 'crf'
+CLASSIFIER              = 'softmax'  # 'softmax' or 'crf'
 OPTIMIZER               = 'adam'     # 'adam', 'nadam', sgd', 'adagrad'
 WEIGHT_DECAY            = 1e-5       # Weight decay
 CLIP                    = 1          # Gradient clipping
-
+UNFREEZE_EPOCH          = 3      # Unfreeze embeddings
 # OS PATHS
 ROOT                    = './data'
 TRAIN_PATH              = ROOT + '/train.jsonl'
@@ -46,7 +46,7 @@ SAVE_PATH          = "./model/"
 # SEED
 SEED                    = 42
 
-DEVICE                  = "cpu"# "cuda" if torch.cuda.is_available() else "cpu"
+DEVICE                  = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 pos2idx = {x : idx + 1 for idx, x in enumerate(nltk.load('help/tagsets/upenn_tagset.pickle').keys())}

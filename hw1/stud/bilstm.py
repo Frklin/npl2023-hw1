@@ -14,7 +14,7 @@ class BiLSTM(nn.Module):
     def __init__(self, embeddings, label_count, device=config.DEVICE, hidden_size=config.HIDDEN_SIZE, lstm_layers=config.N_LSTMS, dropout=config.DROPRATE, classifier=config.CLASSIFIER):
         super(BiLSTM, self).__init__()
         self.embeddings = nn.Embedding.from_pretrained(embeddings)
-        self.embeddings.weight.requires_grad = True
+        self.embeddings.weight.requires_grad = False
         self.classifier = classifier
         self.hidden_dim = hidden_size // 2
         self.device = device
@@ -48,8 +48,8 @@ class BiLSTM(nn.Module):
 
     def init_hidden(self, batch_size):
         return (
-            torch.randn(4, batch_size, self.hidden_dim),
-            torch.randn(4, batch_size, self.hidden_dim),
+            torch.randn(4, batch_size, self.hidden_dim).to(self.device),
+            torch.randn(4, batch_size, self.hidden_dim).to(self.device),
         )
     
 
@@ -74,12 +74,12 @@ class BiLSTM(nn.Module):
         x, self.hidden = self.bilstm(x, self.hidden)
         x, _ = pad_packed_sequence(x, batch_first=True)
         # x = self.norm1(x)
-        # x = self.relu(x)
-        # x = self.dropout(x)
-        # x = self.linear(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.linear(x)
         # x = self.norm2(x)
-        # x = self.relu(x)
-        # x = self.dropout(x)
+        x = self.relu(x)
+        x = self.dropout(x)
         x = self.linear2(x)
 
         return x
@@ -94,6 +94,10 @@ class BiLSTM(nn.Module):
         emissions = self.forward(x, token_lengths, pos=pos, chars=chars, mask=mask)
         preds = self.crf.decode(emissions, mask=mask)
         return preds
+    
+    def unfreeze(self):
+        for param in self.embeddings.parameters():
+            param.requires_grad = True
 
 
 
