@@ -8,7 +8,7 @@ import numpy as np
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score
 from tqdm.auto import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-# import wandb
+import wandb
 from seqeval.metrics import f1_score as f1
 from seqeval.scheme import IOB2
 
@@ -198,18 +198,18 @@ class Trainer:
             dev_loss, dev_accuracy, dev_f1, dev_precision, dev_recall = self.evaluate()
             print(f"Epoch {epoch} train_loss: {train_loss}, train_accuracy: {train_accuracy}, train_F1-score: {train_f1}")
             print(f"Epoch {epoch} val_loss: {dev_loss}, val_accuracy: {dev_accuracy}, val_F1-score: {dev_f1}")
-            # wandb.log({
-            #     "train_loss": train_loss,
-            #     "train_accuracy": train_accuracy,
-            #     "train_f1_score": train_f1,
-            #     "train_precision": train_precision,
-            #     "train_recall": train_recall,
-            #     "val_loss": dev_loss,
-            #     "val_accuracy": dev_accuracy,
-            #     "val_f1_score": dev_f1,
-            #     "val_precision": dev_precision,
-            #     "val_recall": dev_recall
-            # })
+            wandb.log({
+                "train_loss": train_loss,
+                "train_accuracy": train_accuracy,
+                "train_f1_score": train_f1,
+                "train_precision": train_precision,
+                "train_recall": train_recall,
+                "val_loss": dev_loss,
+                "val_accuracy": dev_accuracy,
+                "val_f1_score": dev_f1,
+                "val_precision": dev_precision,
+                "val_recall": dev_recall
+            })
             schedluer.step(dev_loss)
 
             if dev_loss < self.best_val_loss:

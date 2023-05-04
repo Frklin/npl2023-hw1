@@ -2,8 +2,8 @@
 import sys
 sys.path.append('hw1/stud/')
 sys.path.append('hw1')
-# import wandb
-#wandb.login()
+import wandb
+wandb.login()
 from embeddings import load_embeddings
 import torch
 import torch.nn as nn
@@ -167,7 +167,7 @@ def run_epochs(name, train_dataloader,
                embeddings_model=config.EMBEDDING_MODEL,
                 lstm_layers=config.N_LSTMS, 
                 hidden_size=config.HIDDEN_SIZE, 
-                classifier=config.HIDDEN_SIZE, 
+                classifier=config.CLASSIFIER, 
                 opt=config.OPTIMIZER, 
                 batch_size=config.BATCH_SIZE, 
                 lr=config.LEARNING_RATE, 
@@ -185,22 +185,22 @@ def run_epochs(name, train_dataloader,
     if config.POS:
       lstm_name += "-(POS)"
     model_name = '_'.join([name + "-" + embeddings_model, lstm_name, str(hidden_size)+"HL", opt, str(batch_size)+"BS", str(round(lr,4))+"LR", str(round(dropout,1)) + "DR"])
-    #wandb.init(project='nlp_stats',
-                        # name=model_name,        
-                        # config={
-                        #     "embeddings": embeddings_model,
-                        #     "model": model_name,
-                        #     "classifier": classifier,
-                        #     "hidden_layer": hidden_size,
-                        #     "POS": pos,
-                        #     "char": char,
-                        #     "optimizer": opt,
-                        #     "batch_size": batch_size,
-                        #     "learning_rate": lr,
-                        #     "droprate": dropout,
-                        #     "weight_decay": weight_decay,
-                        #     "clip": clip
-                        #     })
+    wandb.init(project='nlp_stats',
+                        name=model_name,        
+                        config={
+                            "embeddings": embeddings_model,
+                            "model": model_name,
+                            "classifier": classifier,
+                            "hidden_layer": hidden_size,
+                            "POS": pos,
+                            "char": char,
+                            "optimizer": opt,
+                            "batch_size": batch_size,
+                            "learning_rate": lr,
+                            "droprate": dropout,
+                            "weight_decay": weight_decay,
+                            "clip": clip
+                            })
 
     model = BiLSTM(embeddings, len(config.label2idx), device, hidden_size, lstm_layers, dropout, classifier)
     
@@ -215,11 +215,11 @@ def run_epochs(name, train_dataloader,
 
 
     loss_function = nn.CrossEntropyLoss(ignore_index=config.label2idx[config.PAD_TOKEN])
-    #wandb.watch(model, log="all")
+    wandb.watch(model, log="all")
 
     trainer = Trainer(model, train_dataloader, dev_dataloader, optimizer, loss_function, device, clip, classifier)
     trainer.train(config.EPOCHS)
-    #wandb.finish()
+    wandb.finish()
 
 
 
