@@ -8,7 +8,10 @@ import numpy as np
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score
 from tqdm.auto import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-import wandb
+# import wandb
+from seqeval.metrics import f1_score as f1
+from seqeval.scheme import IOB2
+
 
 
 
@@ -116,7 +119,8 @@ class Trainer:
 
         train_loss = total_loss / len(self.train_dataloader)
         train_accuracy = accuracy_score(y_true_train, y_pred_train)
-        train_f1 = f1_score(y_true_train, y_pred_train, average='macro')
+        train_f1 = f1_score(y_true_train, y_pred_train, average='macro') 
+        train_seq_f1 = f1(y_true_train, y_pred_train, mode='strict', scheme=IOB2, average='macro')
         train_precision = precision_score(y_true_train, y_pred_train, average='weighted')
         train_recall = recall_score(y_true_train, y_pred_train, average='weighted')
 
@@ -175,12 +179,13 @@ class Trainer:
 
         val_loss = total_loss / len(self.dev_dataloader)
         val_accuracy = accuracy_score(y_true_val, y_pred_val)
+        val_seq_f1 = f1(y_true_val, y_pred_val,average="macro", mode="strict", scheme=IOB2)
         val_f1 = f1_score(y_true_val, y_pred_val, average='macro')
         val_precision = precision_score(y_true_val, y_pred_val, average='weighted')
         val_recall = recall_score(y_true_val, y_pred_val, average='weighted')
 
 
-        return val_loss, val_accuracy, val_f1, val_precision, val_recall
+        return val_loss, val_accuracy, val_seq_f1, val_precision, val_recall
 
     def train(self, num_epochs):
         best_f1 = 0
@@ -193,18 +198,18 @@ class Trainer:
             dev_loss, dev_accuracy, dev_f1, dev_precision, dev_recall = self.evaluate()
             print(f"Epoch {epoch} train_loss: {train_loss}, train_accuracy: {train_accuracy}, train_F1-score: {train_f1}")
             print(f"Epoch {epoch} val_loss: {dev_loss}, val_accuracy: {dev_accuracy}, val_F1-score: {dev_f1}")
-            wandb.log({
-                "train_loss": train_loss,
-                "train_accuracy": train_accuracy,
-                "train_f1_score": train_f1,
-                "train_precision": train_precision,
-                "train_recall": train_recall,
-                "val_loss": dev_loss,
-                "val_accuracy": dev_accuracy,
-                "val_f1_score": dev_f1,
-                "val_precision": dev_precision,
-                "val_recall": dev_recall
-            })
+            # wandb.log({
+            #     "train_loss": train_loss,
+            #     "train_accuracy": train_accuracy,
+            #     "train_f1_score": train_f1,
+            #     "train_precision": train_precision,
+            #     "train_recall": train_recall,
+            #     "val_loss": dev_loss,
+            #     "val_accuracy": dev_accuracy,
+            #     "val_f1_score": dev_f1,
+            #     "val_precision": dev_precision,
+            #     "val_recall": dev_recall
+            # })
             schedluer.step(dev_loss)
 
             if dev_loss < self.best_val_loss:

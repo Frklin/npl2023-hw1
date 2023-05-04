@@ -2,6 +2,8 @@
 import sys
 sys.path.append('hw1/stud/')
 sys.path.append('hw1')
+# import wandb
+#wandb.login()
 from embeddings import load_embeddings
 import torch
 import torch.nn as nn
@@ -12,10 +14,10 @@ from utils import seed_everything, collate_fn
 from torch.utils.data import Dataset, DataLoader
 import torch.optim as optim
 from model import Trainer
-import wandb
+
 import nltk
 
-wandb.login()
+
 
 
 
@@ -65,10 +67,170 @@ def main():
     'Adadelta': {'class': optim.Adadelta, 'params': {'rho': 0.9, 'eps': 1e-06, 'weight_decay' : config.WEIGHT_DECAY}},
     'SGD': {'class': optim.SGD, 'params': {'momentum': 0.9, 'weight_decay' : config.WEIGHT_DECAY}}
 }
+
+    config.EPOCHS = 10
+    # OPTIMIZERS
     lrs = [1e-2,1e-3,5e-4,1e-4]
-    # for opt_name, opt_setting in optimizers_settings.items():
-    #     for lr in lrs:
-    #         wandb.init(project='nlp_stats',
+    for opt_name, opt_setting in optimizers_settings.items():
+        for lr in lrs:
+           run_epochs("OPT", train_loader, val_loader, embeddings,opt=opt_name, lr=lr)
+
+    # HIDDEN LAYERS
+    for hidden_size in [512,1024,2048,4096]:
+        for seed in range(4):
+            seed_everything(seed)
+            run_epochs("HL", train_loader, val_loader, embeddings, hidden_size=hidden_size)
+
+    # CLASSIFIERS
+
+    for classifier in ["softmax", "crf"]:
+       for seed in range(3):
+          for hidden_size in [2048,4096]:
+            seed_everything(seed)
+            run_epochs("CF", train_loader, val_loader, embeddings, classifier=classifier, hidden_size=hidden_size)
+
+    # POS
+    for seed in range(3):
+        seed_everything(seed)
+        config.POS = False
+        run_epochs("POS", train_loader, val_loader, embeddings, pos=False)
+        config.POS = True
+        run_epochs("POS", train_loader, val_loader, embeddings, pos=True)
+
+    # CHAR
+    for seed in range(3):
+        seed_everything(seed)
+        config.CHAR = False
+        run_epochs("CHAR", train_loader, val_loader, embeddings, char=False)
+        config.CHAR = True
+        run_epochs("CHAR", train_loader, val_loader, embeddings, char=True)
+
+    # DROPRATE
+    for droprate in [0.1, 0.3 ,0.4, 0.5]:
+        run_epochs("DR", train_loader, val_loader, embeddings, droprate=droprate)
+
+    # EMBEDDINGS
+    for emb_name in ["glove", "fasttext", "word2vec"]:
+       for seed in range(2):
+          seed_everything(seed)
+          run_epochs("EMB", train_loader, val_loader,embeddings=embeddings, embeddings_model=emb_name)
+
+    # CLIP
+    for clip in [1,2,5,10]:
+        for seed in range(2):
+            seed_everything(seed)
+        run_epochs("CLIP", train_loader, val_loader, embeddings, clip=clip)
+
+    # LSTM LAYERS
+    for n_lstms in [1,2,3]:
+        for seed in range(2):
+            seed_everything(seed)
+            run_epochs("LSTM", train_loader, val_loader, embeddings, n_lstms=n_lstms)
+
+    # FINAL MODELS
+    seed_everything(config.SEED)
+
+    config.EPOCHS = 30
+    # BiLSTM
+    for seed in range(4):
+        seed_everything(seed)
+        run_epochs("FINAL", train_loader, val_loader, embeddings, pos=False, char=False, classifier="softmax")
+    
+    # BiLSTM + CRF
+    for seed in range(4):
+        seed_everything(seed)
+        run_epochs("FINAL", train_loader, val_loader, embeddings, pos=False, char=False, classifier="crf")
+  
+    # BiLSTM + CRF + CNN
+    for seed in range(4):
+        seed_everything(seed)
+        run_epochs("FINAL", train_loader, val_loader, embeddings, pos=False, char=True, classifier="crf")
+    
+    # BiLSTM + CRF + CNN + POS
+    for seed in range(4):
+        seed_everything(seed)
+        run_epochs("FINAL", train_loader, val_loader, embeddings, pos=True, char=True, classifier="crf")
+    
+    # LASTLY, TRY DIFFERENT CLASSIFIER WITH BEST MODEL
+
+    # 2 RELUS WITH 2 LINEAR
+
+    # 2 RELUS WITH 3 LINEAR
+
+
+
+
+
+def run_epochs(name, train_dataloader, 
+               dev_dataloader, 
+               embeddings, 
+               embeddings_model=config.EMBEDDING_MODEL,
+                lstm_layers=config.N_LSTMS, 
+                hidden_size=config.HIDDEN_SIZE, 
+                classifier=config.HIDDEN_SIZE, 
+                opt=config.OPTIMIZER, 
+                batch_size=config.BATCH_SIZE, 
+                lr=config.LEARNING_RATE, 
+                dropout=config.DROPRATE, 
+                weight_decay=config.WEIGHT_DECAY, 
+                clip=config.CLIP, 
+                pos=config.POS,
+                char=config.CHAR,
+                device=config.DEVICE):
+    lstm_name = ("" if lstm_layers == 1 else "Bi-" if lstm_layers == 2 else "Tri-") + "LSTM"
+    if config.CHAR:
+      lstm_name += "-CNN"
+    if classifier == "crf":
+      lstm_name += "-CRF"
+    if config.POS:
+      lstm_name += "-(POS)"
+    model_name = '_'.join([name + "-" + embeddings_model, lstm_name, str(hidden_size)+"HL", opt, str(batch_size)+"BS", str(round(lr,4))+"LR", str(round(dropout,1)) + "DR"])
+    #wandb.init(project='nlp_stats',
+                        # name=model_name,        
+                        # config={
+                        #     "embeddings": embeddings_model,
+                        #     "model": model_name,
+                        #     "classifier": classifier,
+                        #     "hidden_layer": hidden_size,
+                        #     "POS": pos,
+                        #     "char": char,
+                        #     "optimizer": opt,
+                        #     "batch_size": batch_size,
+                        #     "learning_rate": lr,
+                        #     "droprate": dropout,
+                        #     "weight_decay": weight_decay,
+                        #     "clip": clip
+                        #     })
+
+    model = BiLSTM(embeddings, len(config.label2idx), device, hidden_size, lstm_layers, dropout, classifier)
+    
+    if opt == 'adam':
+        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    elif opt == 'nadam':
+        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True)
+    elif opt == 'sgd':
+        optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay)
+    else:
+        optimizer = optim.Adagrad(model.parameters(), lr=lr, weight_decay=weight_decay)
+
+
+    loss_function = nn.CrossEntropyLoss(ignore_index=config.label2idx[config.PAD_TOKEN])
+    #wandb.watch(model, log="all")
+
+    trainer = Trainer(model, train_dataloader, dev_dataloader, optimizer, loss_function, device, clip, classifier)
+    trainer.train(config.EPOCHS)
+    #wandb.finish()
+
+
+
+
+
+
+if __name__ == "__main__":
+    main()
+
+
+        #         #wandb.init(project='nlp_stats',
     #                     name=model_name,        
     #                   config={
     #                       "embeddings": config.EMBEDDING_MODEL,
@@ -82,7 +244,7 @@ def main():
     #                       "droprate": config.DROPRATE
     #                       })
     #         model = BiLSTM(embeddings, len(label2idx), device=device)
-    #         wandb.watch(model, log="all")
+    #         #wandb.watch(model, log="all")
     #         optimizer_class = opt_setting['class']
     #         optimizer_params = {**opt_setting['params'], 'lr': lr}
     #         optimizer = optimizer_class(model.parameters(), **optimizer_params)
@@ -90,93 +252,42 @@ def main():
 
     #         trainer = Trainer(model, train_loader, val_loader, optimizer, loss_function, device)
     #         trainer.train(20)
-    #         wandb.finish()
+    #         #wandb.finish()
             # torch.save(model.state_dict(),  f"{config.SAVE_PATH}/{model_name}.pth")
-    model = BiLSTM(embeddings, len(label2idx), device=device)
-#     # wandb.watch(model)
+#     model = BiLSTM(embeddings, len(label2idx), device=device)
+# #     # #wandb.watch(model)
 
-    if config.OPTIMIZER == 'adam':
-        optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
-    elif config.OPTIMIZER == 'nadam':
-        optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY, amsgrad=True)
-    elif config.OPTIMIZER == 'sgd':
-        optimizer = optim.SGD(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
-    else:
-        optimizer = optim.Adagrad(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
-
-    loss_function = nn.CrossEntropyLoss(ignore_index=label2idx[config.PAD_TOKEN])
-    wandb.init(project='nlp_stats',
-                    name=model_name,        
-                    config={
-                        "embeddings": config.EMBEDDING_MODEL,
-                        "model": model_name,
-                        "classifier": config.CLASSIFIER,
-                        "hidden_layer": config.HIDDEN_SIZE,
-                        "POS": config.POS,
-                        "optimizer": config.OPTIMIZER,
-                        "batch_size": config.BATCH_SIZE,
-                        "learning_rate": config.LEARNING_RATE,
-                        "droprate": config.DROPRATE
-                        })
-
-    trainer = Trainer(model, train_loader, val_loader, optimizer, loss_function, device)
-    trainer.train(config.EPOCHS)
-
-#     torch.save(model.state_dict(), 'event_detection_model.pth')
-
-
-
-
-
-
-# def run_epochs(name, label2idx, embeddings_model, lstm_layers, hidden_size, classifier, opt, batch_size, lr, dropout, weight_decay , clip, device):
-#     lstm_name = ("" if lstm_layers == 1 else "Bi-" if lstm_layers == 2 else "Tri-") + "LSTM"
-#     if config.CHAR:
-#       lstm_name += "-CNN"
-#     if classifier == "crf":
-#       lstm_name += "-CRF"
-#     if config.POS:
-#       lstm_name += "-(POS)"
-#     model_name = '_'.join([name + "-" + embeddings_model, lstm_name, str(hidden_size)+"HL", opt, str(batch_size)+"BS", str(round(lr,4))+"LR", str(round(dropout,1)) + "DR"])
-#     # model_name = "EMB"+emb + "_" + lstm_name + "_" + str(lstm_units) + "_" +  "HL_" + "Softmax_" + "Adam_" +str(batch_size)+"BS_" + str(round(lr,4))+"LR_"+ str(round(dropout,1)) + "DR" 
-#     wandb.init(project='nlp_stats',
-#                         name=model_name,        
-#                       config={
-#                           "embeddings": embeddings_model,
-#                           "model": model_name,
-#                           "classifier": classifier,
-#                           "hidden_layer": hidden_size,
-#                           "POS": config.POS,
-#                           "optimizer": opt,
-#                           "batch_size": batch_size,
-#                           "learning_rate": lr,
-#                           "droprate": dropout
-#                           })
-
-#     model = BiLSTM(embeddings, len(label2idx), device, hidden_size, lstm_layers, dropout, classifier)
-    
-#     if opt == 'adam':
-#         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-#     elif opt == 'nadam':
-#         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay, amsgrad=True)
-#     elif opt == 'sgd':
-#         optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay)
+#     if config.OPTIMIZER == 'adam':
+#         optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
+#     elif config.OPTIMIZER == 'nadam':
+#         optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY, amsgrad=True)
+#     elif config.OPTIMIZER == 'sgd':
+#         optimizer = optim.SGD(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
 #     else:
-#         optimizer = optim.Adagrad(model.parameters(), lr=lr, weight_decay=weight_decay)
+#         optimizer = optim.Adagrad(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
+
+#     loss_function = nn.CrossEntropyLoss(ignore_index=label2idx[config.PAD_TOKEN])
+#     #wandb.init(project='nlp_stats',
+#                     name=model_name,        
+#                     config={
+#                         "embeddings": config.EMBEDDING_MODEL,
+#                         "model": model_name,
+#                         "classifier": config.CLASSIFIER,
+#                         "hidden_layer": config.HIDDEN_SIZE,
+#                         "POS": config.POS,
+#                         "optimizer": config.OPTIMIZER,
+#                         "batch_size": config.BATCH_SIZE,
+#                         "learning_rate": config.LEARNING_RATE,
+#                         "droprate": config.DROPRATE
+#                         })
+
+#     trainer = Trainer(model, train_loader, val_loader, optimizer, loss_function, device)
+#     trainer.train(config.EPOCHS)
+
+# #     torch.save(model.state_dict(), 'event_detection_model.pth')
 
 
-#     loss_function = nn.CrossEntropyLoss(ignore_index=label2idx['<PAD>'])
-#     wandb.watch(model, log="all")
-
-#     trainer = Trainer(model, train_dataloader, dev_dataloader, optimizer, loss_function, device, clip, classifier)
-#     trainer.train(num_epochs)
-#     wandb.finish()
-#     torch.save(model.state_dict(), f"{SAVE_FOLDER}/{round(dev_f1,2)}-{round(dev_loss,2)}-{model_name}.pth")
 
 
 
 
-
-
-if __name__ == "__main__":
-    main()
