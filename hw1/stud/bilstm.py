@@ -28,7 +28,7 @@ class BiLSTM(nn.Module):
 
         # LSTM
         self.bilstm = nn.LSTM(self.embed_dim, hidden_size // 2, num_layers=lstm_layers, bidirectional=True, batch_first=True, dropout=dropout)
-        self.hidden = None
+        self.hidden = self.init_hidden(config.BATCH_SIZE)
         
         # Softmax
         self.relu = nn.ReLU()
@@ -48,13 +48,13 @@ class BiLSTM(nn.Module):
 
     def init_hidden(self, batch_size):
         return (
-            torch.randn(4, batch_size, self.hidden_dim).to(self.device),
-            torch.randn(4, batch_size, self.hidden_dim).to(self.device),
+            torch.randn(4, batch_size, self.hidden_dim),
+            torch.randn(4, batch_size, self.hidden_dim),
         )
     
 
     def forward(self, tokens, token_lengths, pos=None, chars=None, mask=None):
-        self.hidden = self.init_hidden(tokens.shape[0])
+        # self.hidden = self.init_hidden(tokens.shape[0])
         x = self.embeddings(tokens)
         
         if config.CHAR:
@@ -71,7 +71,7 @@ class BiLSTM(nn.Module):
             x = torch.cat((x, pos), dim=-1)
 
         x = pack_padded_sequence(x, token_lengths, batch_first=True, enforce_sorted=False)
-        x, self.hidden = self.bilstm(x, self.hidden)
+        x, self.hidden = self.bilstm(x)
         x, _ = pad_packed_sequence(x, batch_first=True)
         # x = self.norm1(x)
         x = self.relu(x)

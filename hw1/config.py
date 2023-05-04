@@ -46,8 +46,8 @@ SAVE_PATH          = "./model/"
 # SEED
 SEED                    = 42
 
-DEVICE                  = "cuda" if torch.cuda.is_available() else "cpu"
-
+DEVICE                  = "cpu"#"cuda" if torch.cuda.is_available() else "cpu"
+print("Using device: ", DEVICE)
 
 pos2idx = {x : idx + 1 for idx, x in enumerate(nltk.load('help/tagsets/upenn_tagset.pickle').keys())}
 pos2idx[PAD_TOKEN] = PAD_IDX

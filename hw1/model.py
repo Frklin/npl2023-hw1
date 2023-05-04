@@ -48,7 +48,7 @@ class Trainer:
         #Early stopping
         self.val_losses = []
         self.best_val_loss = float('inf')
-        self.patience = 7  
+        self.patience = 3 
         self.epochs_without_improvement = 0
 
 
@@ -92,7 +92,7 @@ class Trainer:
                 m = (labels != config.PAD_VAL)
                 mask = m.clone().detach().to(torch.uint8)
                 
-                self.model.zero_grad()
+                self.model.zero_grad() #### ?
                 loss = self.model.loss(tokens, labels, token_lengths, pos_vectors, chars, mask)
 
                 preds = self.model.decode(tokens,token_lengths, pos_vectors, chars, mask)
@@ -120,7 +120,7 @@ class Trainer:
         train_loss = total_loss / len(self.train_dataloader)
         train_accuracy = accuracy_score(y_true_train, y_pred_train)
         train_f1 = f1_score(y_true_train, y_pred_train, average='macro') 
-        train_seq_f1 = f1(y_true_train, y_pred_train, mode='strict', scheme=IOB2, average='macro')
+        # train_seq_f1 = f1(y_true_train, y_pred_train, mode='strict', scheme=IOB2, average='macro')
         train_precision = precision_score(y_true_train, y_pred_train, average='weighted')
         train_recall = recall_score(y_true_train, y_pred_train, average='weighted')
 
@@ -179,13 +179,13 @@ class Trainer:
 
         val_loss = total_loss / len(self.dev_dataloader)
         val_accuracy = accuracy_score(y_true_val, y_pred_val)
-        val_seq_f1 = f1(y_true_val, y_pred_val,average="macro", mode="strict", scheme=IOB2)
+        # val_seq_f1 = f1(y_true_val, y_pred_val,average="macro", mode="strict", scheme=IOB2)
         val_f1 = f1_score(y_true_val, y_pred_val, average='macro')
         val_precision = precision_score(y_true_val, y_pred_val, average='weighted')
         val_recall = recall_score(y_true_val, y_pred_val, average='weighted')
 
 
-        return val_loss, val_accuracy, val_seq_f1, val_precision, val_recall
+        return val_loss, val_accuracy, val_f1, val_precision, val_recall
 
     def train(self, num_epochs):
         best_f1 = 0
@@ -215,7 +215,7 @@ class Trainer:
             if dev_loss < self.best_val_loss:
                 best_f1 = dev_f1
                 self.best_val_loss = dev_loss
-                torch.save(self.model, config.MODEL_PATH)
+                torch.save(self.model.state_dict(), config.MODEL_PATH)
                 print(f"Saving model at epoch {epoch+1} with validation loss: {self.best_val_loss}.")
                 self.epochs_without_improvement = 0
 

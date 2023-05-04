@@ -61,10 +61,10 @@ class StudentModel(Model):
     # this class should be loading your weights and vocabulary
     def __init__(self):
         embeddings, self.word2idx = load_embeddings()
-        # self.model = BiLSTM(embeddings=embeddings, label_count=config.LABEL_COUNT, device=config.DEVICE).to(config.DEVICE)
+        self.model = BiLSTM(embeddings=embeddings, label_count=config.LABEL_COUNT, device=config.DEVICE).to(config.DEVICE)
 
         # self.model.load_state_dict(torch.load(config.MODEL_PATH, map_location=torch.device(config.DEVICE)))
-        self.model = torch.load(config.MODEL_PATH, map_location=torch.device(config.DEVICE))
+        self.model.load_state_dict(torch.load(config.MODEL_PATH, map_location=torch.device(config.DEVICE)))
 
         self.pos2idx = {pos: i for i, pos in enumerate(config.pos2idx)}
 
@@ -115,7 +115,11 @@ class StudentModel(Model):
         # print(char_inputs)
         # print(pos_vectors)
 
-        predictions = self.model.decode(inputs, length_list, pos_vectors, chars = char_inputs)
+        if config.CLASSIFIER == "crf":
+            predictions = self.model.decode(inputs, length_list, pos_vectors, chars = char_inputs)
+        else:
+            predictions = self.model(inputs, length_list, pos_vectors, chars = char_inputs)
+            predictions = torch.argmax(predictions, dim=2).detach().cpu().numpy().tolist()
 
         predictions = [sentence[:len(tokens[i])] for i, sentence in enumerate(predictions)]
 

@@ -63,91 +63,71 @@ def main():
 
     optimizers_settings = {
     'Adam': {'class': optim.Adam, 'params': {'betas': (0.9, 0.999), 'eps': 1e-08, 'weight_decay' :  config.WEIGHT_DECAY}},
-    'Nadam': {'class': optim.Adam, 'params': {'betas': (0.9, 0.999), 'eps': 1e-08, 'weight_decay' : config.WEIGHT_DECAY, 'amsgrad': True}},
-    'Adadelta': {'class': optim.Adadelta, 'params': {'rho': 0.9, 'eps': 1e-06, 'weight_decay' : config.WEIGHT_DECAY}},
-    'SGD': {'class': optim.SGD, 'params': {'momentum': 0.9, 'weight_decay' : config.WEIGHT_DECAY}}
+    # 'Nadam': {'class': optim.Adam, 'params': {'betas': (0.9, 0.999), 'eps': 1e-08, 'weight_decay' : config.WEIGHT_DECAY, 'amsgrad': True}},
+    # 'Adadelta': {'class': optim.Adadelta, 'params': {'rho': 0.9, 'eps': 1e-06, 'weight_decay' : config.WEIGHT_DECAY}},
+    # 'SGD': {'class': optim.SGD, 'params': {'momentum': 0.9, 'weight_decay' : config.WEIGHT_DECAY}}
 }
 
-    config.EPOCHS = 10
-    # OPTIMIZERS
-    lrs = [1e-2,1e-3,5e-4,1e-4]
-    for opt_name, opt_setting in optimizers_settings.items():
-        for lr in lrs:
-           run_epochs("OPT", train_loader, val_loader, embeddings,opt=opt_name, lr=lr)
+    config.EPOCHS = 20
+    # OPTIMIZERS 6
+    # lrs = [1e-3,5e-4,1e-4]
+    # # for opt_name, opt_setting in optimizers_settings.items():
+    # #    for lr in lrs:
+    # #        run_epochs("OPT", train_loader, val_loader, embeddings,opt=opt_name, lr=lr)
 
-    # HIDDEN LAYERS
-    for hidden_size in [512,1024,2048,4096]:
-        for seed in range(4):
-            seed_everything(seed)
-            run_epochs("HL", train_loader, val_loader, embeddings, hidden_size=hidden_size)
+    # # HIDDEN LAYERS 6
+    # for hidden_size in [1024, 2048, 4096]:
+    #     for seed in range(2):
+    #         seed_everything(seed)
+    #         run_epochs("HL", train_loader, val_loader, embeddings, hidden_size=hidden_size)
 
-    # CLASSIFIERS
+    # # CLASSIFIERS 4
+    # for classifier in ["softmax", "crf"]:
+    #    for seed in range(2):
+    #     #   for hidden_size in [2048,4096]:
+    #         seed_everything(seed)
+    #         run_epochs("CF", train_loader, val_loader, embeddings, classifier=classifier)
 
-    for classifier in ["softmax", "crf"]:
-       for seed in range(3):
-          for hidden_size in [2048,4096]:
-            seed_everything(seed)
-            run_epochs("CF", train_loader, val_loader, embeddings, classifier=classifier, hidden_size=hidden_size)
+    # #
+    # # DROPRATE 2
+    for droprate in [0.3, 0.5]:
+        run_epochs("DR", train_loader, val_loader, embeddings, dropout=droprate)
 
-    # POS
-    for seed in range(3):
-        seed_everything(seed)
-        config.POS = False
-        run_epochs("POS", train_loader, val_loader, embeddings, pos=False)
-        config.POS = True
-        run_epochs("POS", train_loader, val_loader, embeddings, pos=True)
-
-    # CHAR
-    for seed in range(3):
-        seed_everything(seed)
-        config.CHAR = False
-        run_epochs("CHAR", train_loader, val_loader, embeddings, char=False)
-        config.CHAR = True
-        run_epochs("CHAR", train_loader, val_loader, embeddings, char=True)
-
-    # DROPRATE
-    for droprate in [0.1, 0.3 ,0.4, 0.5]:
-        run_epochs("DR", train_loader, val_loader, embeddings, droprate=droprate)
-
-    # EMBEDDINGS
+    # EMBEDDINGS  3
     for emb_name in ["glove", "fasttext", "word2vec"]:
-       for seed in range(2):
-          seed_everything(seed)
           run_epochs("EMB", train_loader, val_loader,embeddings=embeddings, embeddings_model=emb_name)
 
-    # CLIP
-    for clip in [1,2,5,10]:
-        for seed in range(2):
+    # CLIP 2
+    for clip in [1,5]:
             seed_everything(seed)
-        run_epochs("CLIP", train_loader, val_loader, embeddings, clip=clip)
+            run_epochs("CLIP", train_loader, val_loader, embeddings, clip=clip)
 
-    # LSTM LAYERS
-    for n_lstms in [1,2,3]:
-        for seed in range(2):
-            seed_everything(seed)
-            run_epochs("LSTM", train_loader, val_loader, embeddings, n_lstms=n_lstms)
+    # # LSTM LAYERS 70
+    # for n_lstms in [1,2,3]:
+    #     seed_everything(seed)
+    #     run_epochs("LSTM", train_loader, val_loader, embeddings, n_lstms=n_lstms)
 
-    # FINAL MODELS
+    # FINAL MODELS 23
     seed_everything(config.SEED)
 
     config.EPOCHS = 30
     # BiLSTM
-    for seed in range(4):
+    for seed in range(2):
         seed_everything(seed)
         run_epochs("FINAL", train_loader, val_loader, embeddings, pos=False, char=False, classifier="softmax")
     
     # BiLSTM + CRF
-    for seed in range(4):
+    for seed in range(2):
         seed_everything(seed)
         run_epochs("FINAL", train_loader, val_loader, embeddings, pos=False, char=False, classifier="crf")
   
     # BiLSTM + CRF + CNN
-    for seed in range(4):
+    for seed in range(2):
         seed_everything(seed)
         run_epochs("FINAL", train_loader, val_loader, embeddings, pos=False, char=True, classifier="crf")
     
     # BiLSTM + CRF + CNN + POS
-    for seed in range(4):
+    for seed in range(2):
         seed_everything(seed)
         run_epochs("FINAL", train_loader, val_loader, embeddings, pos=True, char=True, classifier="crf")
     
@@ -186,7 +166,7 @@ def run_epochs(name, train_dataloader,
       lstm_name += "-(POS)"
     model_name = '_'.join([name + "-" + embeddings_model, lstm_name, str(hidden_size)+"HL", opt, str(batch_size)+"BS", str(round(lr,4))+"LR", str(round(dropout,1)) + "DR"])
     wandb.init(project='nlp_stats',
-                        name=model_name,        
+                        name="FixedHidden-" + model_name,        
                         config={
                             "embeddings": embeddings_model,
                             "model": model_name,
@@ -202,7 +182,7 @@ def run_epochs(name, train_dataloader,
                             "clip": clip
                             })
 
-    model = BiLSTM(embeddings, len(config.label2idx), device, hidden_size, lstm_layers, dropout, classifier)
+    model = BiLSTM(embeddings, len(config.label2idx), device, hidden_size, lstm_layers, dropout, classifier).to(device)
     
     if opt == 'adam':
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)

@@ -60,5 +60,5 @@ def preprocess_sentence(tokens):
     # tokens = [token if token not in stopwords else "<SW>" for token in tokens ]
 
     # 5. Lemmatize tokens
-    tokens = [lemmatizer.lemmatize(token) for token in tokens]
+    # tokens = [lemmatizer.lemmatize(token) for token in tokens]
     return tokens
