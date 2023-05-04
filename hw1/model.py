@@ -50,6 +50,7 @@ class Trainer:
         self.best_val_loss = float('inf')
         self.patience = 3 
         self.epochs_without_improvement = 0
+        self.patience = 10
 
 
     def train_epoch(self):
@@ -92,7 +93,7 @@ class Trainer:
                 m = (labels != config.PAD_VAL)
                 mask = m.clone().detach().to(torch.uint8)
                 
-                self.model.zero_grad() #### ?
+                # self.model.zero_grad()
                 loss = self.model.loss(tokens, labels, token_lengths, pos_vectors, chars, mask)
 
                 preds = self.model.decode(tokens,token_lengths, pos_vectors, chars, mask)

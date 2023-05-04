@@ -48,8 +48,8 @@ class BiLSTM(nn.Module):
 
     def init_hidden(self, batch_size):
         return (
-            torch.randn(4, batch_size, self.hidden_dim),
-            torch.randn(4, batch_size, self.hidden_dim),
+            torch.randn(4, batch_size, self.hidden_dim).to(self.device),
+            torch.randn(4, batch_size, self.hidden_dim).to(self.device),
         )
     
 

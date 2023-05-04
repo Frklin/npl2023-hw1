@@ -112,24 +112,27 @@ def main():
 
     config.EPOCHS = 30
     # BiLSTM
-    for seed in range(2):
-        seed_everything(seed)
-        run_epochs("FINAL", train_loader, val_loader, embeddings, pos=False, char=False, classifier="softmax")
+    # for seed in range(2):
+    #     seed_everything(seed)
+    #     run_epochs("FINAL", train_loader, val_loader, embeddings, pos=False, char=False, classifier="softmax")
     
-    # BiLSTM + CRF
-    for seed in range(2):
-        seed_everything(seed)
-        run_epochs("FINAL", train_loader, val_loader, embeddings, pos=False, char=False, classifier="crf")
+    # # BiLSTM + CRF
+    # for seed in range(2):
+    #     seed_everything(seed)
+    #     run_epochs("FINAL", train_loader, val_loader, embeddings, pos=False, char=False, classifier="crf")
   
-    # BiLSTM + CRF + CNN
-    for seed in range(2):
-        seed_everything(seed)
-        run_epochs("FINAL", train_loader, val_loader, embeddings, pos=False, char=True, classifier="crf")
+    # # BiLSTM + CRF + CNN
+    # for seed in range(2):
+    #     seed_everything(seed)
+    #     run_epochs("FINAL", train_loader, val_loader, embeddings, pos=False, char=True, classifier="crf")
     
-    # BiLSTM + CRF + CNN + POS
-    for seed in range(2):
-        seed_everything(seed)
-        run_epochs("FINAL", train_loader, val_loader, embeddings, pos=True, char=True, classifier="crf")
+    # # BiLSTM + CRF + CNN + POS
+    # for seed in range(2):
+    #     seed_everything(seed)
+    #     run_epochs("FINAL", train_loader, val_loader, embeddings, pos=True, char=True, classifier="crf")
+
+    run_epochs("FINAL", train_loader, val_loader, embeddings, pos=True, char=True, classifier="crf")
+
     
     # LASTLY, TRY DIFFERENT CLASSIFIER WITH BEST MODEL
 
