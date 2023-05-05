@@ -47,7 +47,7 @@ def main():
     print("Train dataset length: ", len(train_dataset))
 
     train_loader = DataLoader(train_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn, shuffle=True)
 
     lstm_name = ("" if config.N_LSTMS == 1 else "Bi-" if config.N_LSTMS == 2 else "Tri-") + "LSTM"
@@ -90,17 +90,17 @@ def main():
 
     # #
     # # DROPRATE 2
-    for droprate in [0.3, 0.5]:
-        run_epochs("DR", train_loader, val_loader, embeddings, dropout=droprate)
+    # for droprate in [0.3, 0.5]:
+    #     run_epochs("DR", train_loader, val_loader, embeddings, dropout=droprate)
 
-    # EMBEDDINGS  3
-    for emb_name in ["glove", "fasttext", "word2vec"]:
-          run_epochs("EMB", train_loader, val_loader,embeddings=embeddings, embeddings_model=emb_name)
+    # # EMBEDDINGS  3
+    # for emb_name in ["glove", "fasttext", "word2vec"]:
+    #       run_epochs("EMB", train_loader, val_loader,embeddings=embeddings, embeddings_model=emb_name)
 
-    # CLIP 2
-    for clip in [1,5]:
-            seed_everything(seed)
-            run_epochs("CLIP", train_loader, val_loader, embeddings, clip=clip)
+    # # CLIP 2
+    # for clip in [1,5]:
+    #         seed_everything(seed)
+    #         run_epochs("CLIP", train_loader, val_loader, embeddings, clip=clip)
 
     # # LSTM LAYERS 70
     # for n_lstms in [1,2,3]:
@@ -131,7 +131,7 @@ def main():
     #     seed_everything(seed)
     #     run_epochs("FINAL", train_loader, val_loader, embeddings, pos=True, char=True, classifier="crf")
 
-    run_epochs("FINAL", train_loader, val_loader, embeddings, pos=True, char=True, classifier="crf")
+    run_epochs("FINAL", train_loader, val_loader, embeddings, pos=True, char=False, classifier="softmax")
 
     
     # LASTLY, TRY DIFFERENT CLASSIFIER WITH BEST MODEL

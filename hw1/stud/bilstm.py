@@ -27,14 +27,15 @@ class BiLSTM(nn.Module):
             self.embed_dim += config.POS_DIM
 
         # LSTM
-        self.bilstm = nn.LSTM(self.embed_dim, hidden_size // 2, num_layers=lstm_layers, bidirectional=True, batch_first=True, dropout=dropout)
+        self.bilstm = nn.LSTM(self.embed_dim, hidden_size // 2, num_layers=lstm_layers, bidirectional=True, batch_first=True)
         self.hidden = self.init_hidden(config.BATCH_SIZE)
         
         # Softmax
         self.relu = nn.ReLU()
         self.linear = nn.Linear(hidden_size, hidden_size)
         self.linear2 = nn.Linear(hidden_size, label_count)
-        self.dropout = VariationalDropout(dropout)  
+        # self.dropout = VariationalDropout(dropout)  
+        self.dropout = nn.Dropout(dropout)
         self.norm1 = nn.LayerNorm(hidden_size)
         self.norm2 = nn.LayerNorm(hidden_size)
 
@@ -48,8 +49,8 @@ class BiLSTM(nn.Module):
 
     def init_hidden(self, batch_size):
         return (
-            torch.randn(4, batch_size, self.hidden_dim).to(self.device),
-            torch.randn(4, batch_size, self.hidden_dim).to(self.device),
+            torch.randn(4, batch_size, self.hidden_dim),
+            torch.randn(4, batch_size, self.hidden_dim),
         )
     
 
@@ -72,7 +73,7 @@ class BiLSTM(nn.Module):
 
         x = pack_padded_sequence(x, token_lengths, batch_first=True, enforce_sorted=False)
         x, self.hidden = self.bilstm(x)
-        x, _ = pad_packed_sequence(x, batch_first=True)
+        x, _ = pad_packed_sequence(x, batch_first=True, padding_value=config.PAD_IDX)
         # x = self.norm1(x)
         x = self.relu(x)
         x = self.dropout(x)

@@ -81,6 +81,8 @@ class Trainer:
                 logits = self.model(tokens, token_lengths, pos_vectors, chars)
 
                 loss = self.loss_function(logits.view(-1, logits.shape[-1]), labels.view(-1))
+                loss.backward()
+                self.optimizer.step()
 
                 preds = logits.argmax(dim=-1).view(-1).cpu().numpy()
                 labels = labels.view(-1).cpu().numpy()
@@ -95,6 +97,8 @@ class Trainer:
                 
                 # self.model.zero_grad()
                 loss = self.model.loss(tokens, labels, token_lengths, pos_vectors, chars, mask)
+                loss.backward()
+                self.optimizer.step()
 
                 preds = self.model.decode(tokens,token_lengths, pos_vectors, chars, mask)
                 labels = labels.view(-1).cpu().numpy()
@@ -108,8 +112,6 @@ class Trainer:
             if self.clip != 0:
                 nn.utils.clip_grad_norm_(self.model.parameters(), self.clip)
             
-            loss.backward()
-            self.optimizer.step()
 
             y_true_train.extend(labels.tolist())
             y_pred_train.extend(preds)
@@ -211,9 +213,9 @@ class Trainer:
                 "val_precision": dev_precision,
                 "val_recall": dev_recall
             })
-            schedluer.step(dev_loss)
+            # schedluer.step(dev_loss)
 
-            if dev_loss < self.best_val_loss:
+            if dev_loss < self.best_val_loss or dev_f1 > best_f1:
                 best_f1 = dev_f1
                 self.best_val_loss = dev_loss
                 torch.save(self.model.state_dict(), config.MODEL_PATH)

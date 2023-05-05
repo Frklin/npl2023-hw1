@@ -11,12 +11,12 @@ LABEL_COUNT             = 12         # Number of labels
 UNK_TOKEN               = "<UNK>"    # Unknown token
 PAD_TOKEN               = "<PAD>"    # Padding token
 PAD_IDX                 = 0          # Padding index
-PAD_VAL                 = 11         # Padding value
+PAD_VAL                 = -100         # Padding value
 POS                     = True       # Use POS tags
 POS_DIM                 = 47         # POS dimension
 
 # CHARACTERS
-CHAR                    = True       # Use character embeddings
+CHAR                    = False       # Use character embeddings
 CHAR_DIM                = 50         # Character embeddings dimension
 CHAR_VOCAB_SIZE         = 230        # Character vocabulary size
 CNN_FILTERS             = 30        # Number of filters
@@ -24,15 +24,15 @@ CNN_FILTERS             = 30        # Number of filters
 # LSTM
 EPOCHS                  = 30         # Number of epochs
 HIDDEN_SIZE             = 2048       # Size of the hidden layer
-BATCH_SIZE              = 64         # Size of the batch
+BATCH_SIZE              = 32         # Size of the batch
 N_LSTMS                 = 2          # Number of LSTM layers
-LEARNING_RATE           = 1e-4       # Learning rate
+LEARNING_RATE           = 1e-3       # Learning rate
 DROPRATE                = 0.5        # Dropout rate
-CLASSIFIER              = 'crf'  # 'softmax' or 'crf'
+CLASSIFIER              = 'softmax'  # 'softmax' or 'crf'
 OPTIMIZER               = 'adam'     # 'adam', 'nadam', sgd', 'adagrad'
 WEIGHT_DECAY            = 1e-5       # Weight decay
-CLIP                    = 1          # Gradient clipping
-UNFREEZE_EPOCH          = 5      # Unfreeze embeddings
+CLIP                    = 0          # Gradient clipping
+UNFREEZE_EPOCH          = 10      # Unfreeze embeddings
 # OS PATHS
 ROOT                    = './data'
 TRAIN_PATH              = ROOT + '/train.jsonl'
@@ -46,7 +46,7 @@ SAVE_PATH          = "./model/"
 # SEED
 SEED                    = 42
 
-DEVICE                  = "cuda" if torch.cuda.is_available() else "cpu"
+DEVICE                  = "cpu"#"cuda" if torch.cuda.is_available() else "cpu"
 print("Using device: ", DEVICE)
 
 pos2idx = {x : idx + 1 for idx, x in enumerate(nltk.load('help/tagsets/upenn_tagset.pickle').keys())}

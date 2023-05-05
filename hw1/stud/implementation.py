@@ -66,6 +66,8 @@ class StudentModel(Model):
         # self.model.load_state_dict(torch.load(config.MODEL_PATH, map_location=torch.device(config.DEVICE)))
         self.model.load_state_dict(torch.load(config.MODEL_PATH, map_location=torch.device(config.DEVICE)))
 
+        self.model.eval()
+
         self.pos2idx = {pos: i for i, pos in enumerate(config.pos2idx)}
 
     def predict(self, tokens: List[List[str]]) -> List[List[str]]:

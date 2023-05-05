@@ -35,7 +35,7 @@ def load_embeddings(embedding_path: str = config.EMBEDDINGS_PATH, embedding_type
     embeddings[40000] = embeddings[0]
     embeddings[config.PAD_IDX] = np.zeros((1, emb_file.vector_size), dtype=np.float32)
     # embeddings = np.append(embeddings, np.zeros((1, emb_file.vector_size), dtype=np.float32), axis=0)
-    embeddings = np.append(embeddings, np.random.rand(1, emb_file.vector_size).astype(np.float32), axis=0)
+    embeddings = np.append(embeddings, np.zeros((1, emb_file.vector_size)).astype(np.float32), axis=0)
     
     return torch.tensor(embeddings, dtype=torch.float32), word2idx
 
