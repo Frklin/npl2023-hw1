@@ -1,0 +1,61 @@
+wandb_version: 1
+
+POS:
+  desc: null
+  value: false
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.12.5
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    python_version: 3.9.16
+    start_time: 1683323988
+    t:
+      1:
+      - 1
+      - 5
+      2:
+      - 1
+      - 5
+      3:
+      - 13
+      - 16
+      4: 3.9.16
+      5: 0.12.5
+      8:
+      - 5
+batch_size:
+  desc: null
+  value: 64
+char:
+  desc: null
+  value: true
+classifier:
+  desc: null
+  value: crf
+clip:
+  desc: null
+  value: 0
+droprate:
+  desc: null
+  value: 0.4
+embeddings:
+  desc: null
+  value: GenGlove
+hidden_layer:
+  desc: null
+  value: 1024
+learning_rate:
+  desc: null
+  value: 0.0001
+model:
+  desc: null
+  value: GenGlove_Bi-LSTM-CNN-CRF_1024HL_adam_64BS_0.0001LR_0.4DR_0CL
+optimizer:
+  desc: null
+  value: adam
+weight_decay:
+  desc: null
+  value: 1.0e-05

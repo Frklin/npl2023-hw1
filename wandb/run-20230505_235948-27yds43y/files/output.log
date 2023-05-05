@@ -1,0 +1,21 @@
+Traceback (most recent call last):
+  File "/Users/fra/miniconda3/envs/nlp2023-hw1/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/Users/fra/miniconda3/envs/nlp2023-hw1/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/Users/fra/Desktop/University/MNLP/nlp2023-hw1/hw1/stud/main.py", line 196, in <module>
+    main()
+  File "/Users/fra/Desktop/University/MNLP/nlp2023-hw1/hw1/stud/main.py", line 76, in main
+    model.load_state_dict(torch.load(config.MODEL_PATH))
+  File "/Users/fra/miniconda3/envs/nlp2023-hw1/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1406, in load_state_dict
+    raise RuntimeError('Error(s) in loading state_dict for {}:\n\t{}'.format(
+RuntimeError: Error(s) in loading state_dict for BiLSTM:
+	size mismatch for bilstm.weight_ih_l0: copying a param with shape torch.Size([2048, 368]) from checkpoint, the shape in current model is torch.Size([2048, 350]).
+	size mismatch for bilstm.weight_ih_l0_reverse: copying a param with shape torch.Size([2048, 368]) from checkpoint, the shape in current model is torch.Size([2048, 350]).
+	size mismatch for linear.weight: copying a param with shape torch.Size([1024, 2048]) from checkpoint, the shape in current model is torch.Size([2048, 1024]).
+	size mismatch for linear.bias: copying a param with shape torch.Size([1024]) from checkpoint, the shape in current model is torch.Size([2048]).
+	size mismatch for linear2.weight: copying a param with shape torch.Size([12, 1024]) from checkpoint, the shape in current model is torch.Size([12, 2048]).
+	size mismatch for norm1.weight: copying a param with shape torch.Size([2048]) from checkpoint, the shape in current model is torch.Size([1024]).
+	size mismatch for norm1.bias: copying a param with shape torch.Size([2048]) from checkpoint, the shape in current model is torch.Size([1024]).
+	size mismatch for conv1.weight: copying a param with shape torch.Size([30, 50, 3]) from checkpoint, the shape in current model is torch.Size([50, 50, 3]).
+	size mismatch for conv1.bias: copying a param with shape torch.Size([30]) from checkpoint, the shape in current model is torch.Size([50]).

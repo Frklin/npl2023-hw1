@@ -1,0 +1,6 @@
+2023-05-05T22:25:20.897792746Z Using device:  cpu
+2023-05-05T22:25:20.982035652Z  * Serving Flask app 'app' (lazy loading)
+2023-05-05T22:25:20.982061111Z  * Environment: production
+2023-05-05T22:25:20.982064938Z    WARNING: This is a development server. Do not use it in a production deployment.
+2023-05-05T22:25:20.982067667Z    Use a production WSGI server instead.
+2023-05-05T22:25:20.982070297Z  * Debug mode: off

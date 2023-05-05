@@ -2,7 +2,7 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-import hw1.config as config
+import config
 from scipy import stats
 import wandb
 import pandas as pd
@@ -28,7 +28,7 @@ def plot_confusion_matrix(pred, labels):
     plt.title("Confusion Matrix")
     plt.xlabel('Predicted')
     plt.ylabel('True')
-    plt.show()
+    plt.savefig("hw1/stud/img/confusion_matrix.png")
 
 def plot_optimizers_comparison():
     api = wandb.Api()
@@ -36,8 +36,6 @@ def plot_optimizers_comparison():
     data = []
     print(runs[0].name)
     for run in runs:
-        if run.name[:3] != 'OPT':
-            continue
         data.append({
             'optimizer': run.config['optimizer'],
             'learning_rate': run.config['learning_rate'],
@@ -53,12 +51,10 @@ def plot_optimizers_comparison():
 
 
 def plot_hiddensize_comparison():
-    results = {40: [], 80: [], 100: [], 140: [], 256: [], 512: [], 1024: [], 2048: []}
+    results = {512:[], 1024: [], 2048: [], 4096: []}
     api = wandb.Api()
     runs = api.runs("nlp_stats")
     for run in runs:
-        if run.name[:2] != 'HL':
-            continue
         config = run.config
         results[config["hidden_layer"]].append(run.summary["val_f1_score"])
 
@@ -72,10 +68,8 @@ def plot_hiddensize_comparison():
     x = np.linspace(min(lstm_units), max(lstm_units), 100)
     y = poly_func(x)
 
-    # Plot Polynomial Regression
     plt.plot(x, y, label="Polynomial Regression", color="mediumseagreen", linestyle="--")
 
-    # Plot Median and 95% Confidence Interval Bars
     for unit, median, interval in zip(lstm_units, medians, conf_intervals):
         plt.plot([unit, unit], interval, color="dodgerblue", linewidth=2.5)
         plt.scatter(unit, median, color="dodgerblue")
@@ -91,8 +85,6 @@ def plot_classifiers_comparison():
     data = []
 
     for run in runs:
-        if run.name[:2] != 'CF':  
-            continue
         data.append({
             'classifier': run.config['classifier'],
             'learning_rate': run.config['learning_rate'],
@@ -106,7 +98,3 @@ def plot_classifiers_comparison():
     plt.title("Classifiers Comparison")
     plt.show()
 
-
-plot_classifiers_comparison()
-# plot_hiddensize_comparison()
-plot_optimizers_comparison()

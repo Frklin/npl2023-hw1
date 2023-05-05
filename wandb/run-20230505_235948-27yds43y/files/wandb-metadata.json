@@ -1,0 +1,22 @@
+{
+    "os": "macOS-10.16-x86_64-i386-64bit",
+    "python": "3.9.16",
+    "heartbeatAt": "2023-05-05T21:59:52.295534",
+    "startedAt": "2023-05-05T21:59:48.664873",
+    "docker": null,
+    "cpu_count": 8,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/Users/fra/Desktop/University/MNLP/nlp2023-hw1/hw1/stud/main.py",
+    "codePath": "hw1/stud/main.py",
+    "git": {
+        "remote": "https://github.com/Frklin/npl2023-hw1.git",
+        "commit": "0d19e67aaee9e2b727def25adeedb313fc4a197c"
+    },
+    "email": "palandra.1849712@studenti.uniroma1.it",
+    "root": "/Users/fra/Desktop/University/MNLP/nlp2023-hw1",
+    "host": "FrancessMacBook.homenet.telecomitalia.it",
+    "username": "fra",
+    "executable": "/Users/fra/miniconda3/envs/nlp2023-hw1/bin/python3"
+}

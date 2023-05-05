@@ -1,9 +1,7 @@
-# from hw1.stud import *
 import sys
 sys.path.append('hw1/stud/')
 sys.path.append('hw1')
-import wandb
-wandb.login()
+
 from embeddings import load_embeddings
 import torch
 import torch.nn as nn
@@ -11,12 +9,13 @@ import config
 from bilstm import BiLSTM
 from load import MyDataset
 from utils import seed_everything, collate_fn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 import torch.optim as optim
-from model import Trainer
+from trainer import Trainer
 
 import nltk
-
+import wandb
+wandb.login()
 
 
 
@@ -24,123 +23,88 @@ import nltk
 
 def main():
     
+    # Set seed for reproducibility
     seed_everything(config.SEED)
-    
+
+    # Load embeddings
     embeddings, word2idx = load_embeddings()
 
+    # Define label2idx, a dictionary mapping label names to integer indices
     label2idx = {"O": 0, "B-SENTIMENT": 1, "I-SENTIMENT": 2, "B-CHANGE": 3, "I-CHANGE": 4, "B-ACTION": 5, "I-ACTION": 6, "B-SCENARIO": 7, "I-SCENARIO": 8, "B-POSSESSION": 9, "I-POSSESSION": 10, config.PAD_TOKEN : config.PAD_VAL}
-    idx2label = {v: k for k, v in label2idx.items()}
-
-    # pos2idx = {config.PAD_TOKEN: config.PAD_IDX, "CC" : 1, "CD" : 2, "DT" : 3, "EX" : 4, "FW" : 5, "IN" : 6, "JJ" : 7, "JJR" : 8, "JJS" : 9, "LS" : 10, "MD" : 11, "NN" : 12, "NNS" : 13, "NNP" : 14, "NNPS" : 15, "PDT" : 16, "POS" : 17, "PRP" : 18, "PRP$" : 19, "RB" : 20, "RBR" : 21, "RBS" : 22, "RP" : 23, "SYM" : 24, "TO" : 25, "UH" : 26, "VB" : 27, "VBD" : 28, "VBG" : 29, "VBN" : 30, "VBP" : 31, "VBZ" : 32, "WDT" : 33, "WP" : 34, "WP$" : 35, "WRB" : 36}
     
+    # Define pos2idx, a dictionary mapping POS tags to integer indices
     pos2idx = {x : idx + 1 for idx, x in enumerate(nltk.load('help/tagsets/upenn_tagset.pickle').keys())}
     pos2idx[config.PAD_TOKEN] = config.PAD_IDX
     pos2idx['#'] = len(pos2idx)
 
-    char2idx = {config.PAD_TOKEN: config.PAD_VAL, config.UNK_TOKEN: 1, "a" : 1, "b" : 2} 
+    # Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    train_dataset = MyDataset(config.TRAIN_PATH, word2idx, label2idx, pos2idx, char2idx)
-    val_dataset = MyDataset(config.VAL_PATH, word2idx, label2idx, pos2idx, char2idx)
-    test_dataset = MyDataset(config.TEST_PATH, word2idx, label2idx, pos2idx, char2idx)
+    # Load data
+    train_dataset = MyDataset(config.TRAIN_PATH, word2idx, label2idx, pos2idx)
+    val_dataset = MyDataset(config.VAL_PATH, word2idx, label2idx, pos2idx)
+    test_dataset = MyDataset(config.TEST_PATH, word2idx, label2idx, pos2idx,)
 
-    print("Train dataset length: ", len(train_dataset))
-
+    # Create dataloaders
     train_loader = DataLoader(train_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn, shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn, shuffle=True)
 
-    lstm_name = ("" if config.N_LSTMS == 1 else "Bi-" if config.N_LSTMS == 2 else "Tri-") + "LSTM"
-    if config.CHAR:
+    # Define model name 
+    model_name = get_model_name()
+
+    # Initialize wandb
+    # wandb.init(project='nlp_stats',
+    #                     name=model_name,
+    #                     config={
+    #                         "embeddings": config.EMBEDDING_MODEL,
+    #                         "model": model_name,
+    #                         "classifier": config.CLASSIFIER,
+    #                         "hidden_layer": config.HIDDEN_SIZE,
+    #                         "POS": config.POS,
+    #                         "char": config.CHAR,
+    #                         "optimizer": config.OPTIMIZER,
+    #                         "batch_size": config.BATCH_SIZE,
+    #                         "learning_rate": config.LEARNING_RATE,
+    #                         "droprate": config.DROPRATE,
+    #                         "weight_decay": config.WEIGHT_DECAY,
+    #                         "clip": config.CLIP
+    #                         })
+    
+    # Initialize model
+    model = BiLSTM(embeddings, len(config.label2idx), device).to(device)
+    model.load_state_dict(torch.load(config.MODEL_PATH))
+
+    # Initialize optimizer
+    optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
+
+    # Initialize loss function
+    loss_function = nn.CrossEntropyLoss(ignore_index=config.label2idx[config.PAD_TOKEN])
+
+    # Initialize trainer
+    trainer = Trainer(model, train_loader, val_loader, optimizer, loss_function, device)
+    
+    # Train model
+    trainer.train(config.EPOCHS)
+
+
+
+
+
+
+
+
+
+def get_model_name(lstm_layers=config.N_LSTMS, char=config.CHAR, pos=config.POS, classifier=config.CLASSIFIER, hidden_size=config.HIDDEN_SIZE, opt=config.OPTIMIZER, batch_size=config.BATCH_SIZE, lr=config.LEARNING_RATE, dropout=config.DROPRATE, clip=config.CLIP, embeddings=config.EMBEDDING_MODEL):
+    lstm_name = ("" if lstm_layers == 1 else "Bi-" if lstm_layers == 2 else "Tri-") + "LSTM"
+    if char:
       lstm_name += "-CNN"
-    if config.CLASSIFIER == "crf":
+    if classifier == "crf":
       lstm_name += "-CRF"
-    if config.POS:
+    if pos:
       lstm_name += "-(POS)"
-    model_name = '_'.join([config.EMBEDDING_MODEL, lstm_name, str(config.HIDDEN_SIZE)+"HL", config.OPTIMIZER, str(config.BATCH_SIZE)+"BS", str(round(config.LEARNING_RATE,4))+"LR", str(round(config.DROPRATE,1)) + "DR"])
-    print(model_name)
-
-
-    optimizers_settings = {
-    'Adam': {'class': optim.Adam, 'params': {'betas': (0.9, 0.999), 'eps': 1e-08, 'weight_decay' :  config.WEIGHT_DECAY}},
-    # 'Nadam': {'class': optim.Adam, 'params': {'betas': (0.9, 0.999), 'eps': 1e-08, 'weight_decay' : config.WEIGHT_DECAY, 'amsgrad': True}},
-    # 'Adadelta': {'class': optim.Adadelta, 'params': {'rho': 0.9, 'eps': 1e-06, 'weight_decay' : config.WEIGHT_DECAY}},
-    # 'SGD': {'class': optim.SGD, 'params': {'momentum': 0.9, 'weight_decay' : config.WEIGHT_DECAY}}
-}
-
-    config.EPOCHS = 20
-    # OPTIMIZERS 6
-    # lrs = [1e-3,5e-4,1e-4]
-    # # for opt_name, opt_setting in optimizers_settings.items():
-    # #    for lr in lrs:
-    # #        run_epochs("OPT", train_loader, val_loader, embeddings,opt=opt_name, lr=lr)
-
-    # # HIDDEN LAYERS 6
-    # for hidden_size in [1024, 2048, 4096]:
-    #     for seed in range(2):
-    #         seed_everything(seed)
-    #         run_epochs("HL", train_loader, val_loader, embeddings, hidden_size=hidden_size)
-
-    # # CLASSIFIERS 4
-    # for classifier in ["softmax", "crf"]:
-    #    for seed in range(2):
-    #     #   for hidden_size in [2048,4096]:
-    #         seed_everything(seed)
-    #         run_epochs("CF", train_loader, val_loader, embeddings, classifier=classifier)
-
-    # #
-    # # DROPRATE 2
-    # for droprate in [0.3, 0.5]:
-    #     run_epochs("DR", train_loader, val_loader, embeddings, dropout=droprate)
-
-    # # EMBEDDINGS  3
-    # for emb_name in ["glove", "fasttext", "word2vec"]:
-    #       run_epochs("EMB", train_loader, val_loader,embeddings=embeddings, embeddings_model=emb_name)
-
-    # # CLIP 2
-    # for clip in [1,5]:
-    #         seed_everything(seed)
-    #         run_epochs("CLIP", train_loader, val_loader, embeddings, clip=clip)
-
-    # # LSTM LAYERS 70
-    # for n_lstms in [1,2,3]:
-    #     seed_everything(seed)
-    #     run_epochs("LSTM", train_loader, val_loader, embeddings, n_lstms=n_lstms)
-
-    # FINAL MODELS 23
-    seed_everything(config.SEED)
-
-    config.EPOCHS = 30
-    # BiLSTM
-    # for seed in range(2):
-    #     seed_everything(seed)
-    #     run_epochs("FINAL", train_loader, val_loader, embeddings, pos=False, char=False, classifier="softmax")
-    
-    # # BiLSTM + CRF
-    # for seed in range(2):
-    #     seed_everything(seed)
-    #     run_epochs("FINAL", train_loader, val_loader, embeddings, pos=False, char=False, classifier="crf")
-  
-    # # BiLSTM + CRF + CNN
-    # for seed in range(2):
-    #     seed_everything(seed)
-    #     run_epochs("FINAL", train_loader, val_loader, embeddings, pos=False, char=True, classifier="crf")
-    
-    # # BiLSTM + CRF + CNN + POS
-    # for seed in range(2):
-    #     seed_everything(seed)
-    #     run_epochs("FINAL", train_loader, val_loader, embeddings, pos=True, char=True, classifier="crf")
-
-    run_epochs("FINAL", train_loader, val_loader, embeddings, pos=True, char=False, classifier="softmax")
-
-    
-    # LASTLY, TRY DIFFERENT CLASSIFIER WITH BEST MODEL
-
-    # 2 RELUS WITH 2 LINEAR
-
-    # 2 RELUS WITH 3 LINEAR
-
-
+    model_name = '_'.join([embeddings, lstm_name, str(hidden_size)+"HL", opt, str(batch_size)+"BS", str(round(lr,4))+"LR", str(round(dropout,1)) + "DR", str(clip) + "CL"])
+    return model_name
 
 
 
@@ -160,14 +124,33 @@ def run_epochs(name, train_dataloader,
                 pos=config.POS,
                 char=config.CHAR,
                 device=config.DEVICE):
-    lstm_name = ("" if lstm_layers == 1 else "Bi-" if lstm_layers == 2 else "Tri-") + "LSTM"
-    if config.CHAR:
-      lstm_name += "-CNN"
-    if classifier == "crf":
-      lstm_name += "-CRF"
-    if config.POS:
-      lstm_name += "-(POS)"
-    model_name = '_'.join([name + "-" + embeddings_model, lstm_name, str(hidden_size)+"HL", opt, str(batch_size)+"BS", str(round(lr,4))+"LR", str(round(dropout,1)) + "DR"])
+    '''
+    Train the model for the specified number of epochs.
+
+    Args:
+        name (str): The name of the model.
+        train_dataloader (DataLoader): A PyTorch DataLoader object containing the training data.
+        dev_dataloader (DataLoader): A PyTorch DataLoader object containing the development data.
+        embeddings (Embedding): A PyTorch Embedding object containing the word embeddings.
+        embeddings_model (str): The name of the embedding model.
+        lstm_layers (int): The number of LSTM layers to use.
+        hidden_size (int): The size of the hidden layer.
+        classifier (str): The type of classifier to use.
+        opt (str): The optimization algorithm to use.
+        batch_size (int): The batch size to use.
+        lr (float): The learning rate.
+        dropout (float): The dropout rate.
+        weight_decay (float): The weight decay.
+        clip (float): The maximum norm of the gradients.
+        pos (bool): Whether or not to use POS tags.
+        char (bool): Whether or not to use character-level embeddings.
+        device (str): The device to use for training.
+
+    Returns:
+        None
+    '''
+        
+    model_name = name + get_model_name(lstm_layers, char, pos, classifier, hidden_size, opt, batch_size, lr, dropout, clip, embeddings_model)
     wandb.init(project='nlp_stats',
                         name="FixedHidden-" + model_name,        
                         config={
@@ -213,64 +196,4 @@ if __name__ == "__main__":
     main()
 
 
-        #         #wandb.init(project='nlp_stats',
-    #                     name=model_name,        
-    #                   config={
-    #                       "embeddings": config.EMBEDDING_MODEL,
-    #                       "model": model_name,
-    #                       "classifier": config.CLASSIFIER,
-    #                       "hidden_layer": config.HIDDEN_SIZE,
-    #                       "POS": config.POS,
-    #                       "optimizer": opt_name,
-    #                       "batch_size": config.BATCH_SIZE,
-    #                       "learning_rate": lr,
-    #                       "droprate": config.DROPRATE
-    #                       })
-    #         model = BiLSTM(embeddings, len(label2idx), device=device)
-    #         #wandb.watch(model, log="all")
-    #         optimizer_class = opt_setting['class']
-    #         optimizer_params = {**opt_setting['params'], 'lr': lr}
-    #         optimizer = optimizer_class(model.parameters(), **optimizer_params)
-    #         loss_function = nn.CrossEntropyLoss(ignore_index=label2idx[config.PAD_TOKEN])
-
-    #         trainer = Trainer(model, train_loader, val_loader, optimizer, loss_function, device)
-    #         trainer.train(20)
-    #         #wandb.finish()
-            # torch.save(model.state_dict(),  f"{config.SAVE_PATH}/{model_name}.pth")
-#     model = BiLSTM(embeddings, len(label2idx), device=device)
-# #     # #wandb.watch(model)
-
-#     if config.OPTIMIZER == 'adam':
-#         optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
-#     elif config.OPTIMIZER == 'nadam':
-#         optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY, amsgrad=True)
-#     elif config.OPTIMIZER == 'sgd':
-#         optimizer = optim.SGD(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
-#     else:
-#         optimizer = optim.Adagrad(model.parameters(), lr=config.LEARNING_RATE, weight_decay=config.WEIGHT_DECAY)
-
-#     loss_function = nn.CrossEntropyLoss(ignore_index=label2idx[config.PAD_TOKEN])
-#     #wandb.init(project='nlp_stats',
-#                     name=model_name,        
-#                     config={
-#                         "embeddings": config.EMBEDDING_MODEL,
-#                         "model": model_name,
-#                         "classifier": config.CLASSIFIER,
-#                         "hidden_layer": config.HIDDEN_SIZE,
-#                         "POS": config.POS,
-#                         "optimizer": config.OPTIMIZER,
-#                         "batch_size": config.BATCH_SIZE,
-#                         "learning_rate": config.LEARNING_RATE,
-#                         "droprate": config.DROPRATE
-#                         })
-
-#     trainer = Trainer(model, train_loader, val_loader, optimizer, loss_function, device)
-#     trainer.train(config.EPOCHS)
-
-# #     torch.save(model.state_dict(), 'event_detection_model.pth')
-
-
-
-
-
-
+    
