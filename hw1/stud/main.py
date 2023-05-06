@@ -28,14 +28,16 @@ def main():
     seed_everything(config.SEED)
 
     # Load embeddings
-    embeddings, word2idx = load_embeddings()
+    embeddings = load_embeddings()
+
+    word2idx = config.word2idx
 
     # Define label2idx, a dictionary mapping label names to integer indices
     label2idx = {"O": 0, "B-SENTIMENT": 1, "I-SENTIMENT": 2, "B-CHANGE": 3, "I-CHANGE": 4, "B-ACTION": 5, "I-ACTION": 6, "B-SCENARIO": 7, "I-SCENARIO": 8, "B-POSSESSION": 9, "I-POSSESSION": 10, config.PAD_TOKEN : config.PAD_VAL}
     
     # Define pos2idx, a dictionary mapping POS tags to integer indices
     pos2idx = {x : idx + 1 for idx, x in enumerate(nltk.load('help/tagsets/upenn_tagset.pickle').keys())}
-    pos2idx[config.PAD_TOKEN] = config.PAD_IDX
+    pos2idx[config.PAD_TOKEN] = 0
     pos2idx['#'] = len(pos2idx)
 
     # Device
@@ -92,7 +94,7 @@ def main():
     true, preds = trainer.predict()
 
     # Plot confusion matrix
-    plot_confusion_matrix(preds, true)
+    # plot_confusion_matrix(preds, true)
 
 
 

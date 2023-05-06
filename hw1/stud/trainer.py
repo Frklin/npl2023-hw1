@@ -8,6 +8,7 @@ from tqdm.auto import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torch.nn.functional as F
 import wandb
+import itertools
 
 
 class Trainer:
@@ -148,7 +149,7 @@ class Trainer:
         total_loss = 0
 
         with torch.no_grad():
-            for tokens, labels, token_lengths, pos, chars in tqdm(self.dev_dataloader):
+            for tokens, labels, token_lengths, pos, chars in tqdm(self.val_dataloader):
                 tokens, labels = tokens.to(self.device), labels.to(self.device)
 
                 # Convert POS and character features to tensor and move to device
@@ -193,7 +194,7 @@ class Trainer:
                 y_pred_val.extend(preds)
 
         # Calculate metrics
-        val_loss = total_loss / len(self.dev_dataloader)
+        val_loss = total_loss / len(self.val_dataloader)
         val_accuracy = accuracy_score(y_true_val, y_pred_val)
         val_f1 = f1_score(y_true_val, y_pred_val, average='macro')
         val_precision = precision_score(y_true_val, y_pred_val, average='weighted')
@@ -246,7 +247,7 @@ class Trainer:
             
             # Check if the current epoch improves the best validation loss or F1 score
             if val_loss < self.best_val_loss or val_f1_score > best_f1_score:
-                best_f1 = val_f1
+                best_f1_score = val_f1_score
                 self.best_val_loss = val_loss
                 torch.save(self.model.state_dict(), config.MODEL_PATH)
                 print(f"Saving model at epoch {epoch+1} with validation loss: {self.best_val_loss}.")
@@ -257,7 +258,7 @@ class Trainer:
 
             if self.epochs_without_improvement >= self.patience:
                 val_loss = self.best_val_loss
-                val_f1 = best_f1
+                val_f1 = best_f1_score
                 print(f"Early stopping at epoch {epoch+1}. Best validation loss: {self.best_val_loss}.")
                 break
 
@@ -278,7 +279,7 @@ class Trainer:
                 tokens = tokens.to(self.device)
 
                 # Convert POS and character features to tensor and move to device
-                pos, chars = pos.to(self.device) if config.POS else None, chars.to(self.device) if config.CHAR else None
+                pos, chars = pos.to(self.device), chars.to(self.device) 
 
                 # Convert POS tags to one-hot vectors
                 if config.POS:
@@ -294,12 +295,11 @@ class Trainer:
                     # CRF Classifier
                     m = (labels != config.PAD_VAL)
                     mask = m.clone().detach().to(torch.uint8)
-                    labels = self.model(labels, token_lengths, pos_vectors, chars, mask)
+                    pred = self.model.decode(labels, token_lengths, pos_vectors, chars, mask)
                     labels = labels.view(-1).cpu().numpy()
                     org_idxs = np.where(labels != config.PAD_VAL)[0]
                     labels = labels[org_idxs]
-                    true.append(labels.tolist())
-                    preds.append(labels.tolist())
+                    pred = sum(pred, [])
 
                 elif self.classifier == 'softmax':
                     # Softmax Classifier
@@ -312,4 +312,10 @@ class Trainer:
                     true.append(labels.tolist())
                     preds.append(pred.tolist())
 
+                true.extend(labels.tolist())
+                preds.extend(pred)
+
+        test_f1 = f1_score(true, preds, average='macro')
+        print(f"Test F1-score: {test_f1}")
+        
         return true, preds

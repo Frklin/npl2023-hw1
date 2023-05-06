@@ -6,6 +6,8 @@ import torch
 import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
+from typing import List
+
 
 nltk.download('punkt')
 nltk.download('stopwords')
@@ -46,10 +48,14 @@ def collate_fn(batch):
     max_word_length = max([len(word) for sentence in chars_list for word in sentence]) if config.CHAR else None
 
     # Pad the token, label, part-of-speech tag, and character sequences to the maximum length
-    padded_tokens = [tokens + [config.PAD_IDX] * (max_length - len(tokens)) for tokens in tokens_list]
-    padded_labels = [labels + [config.PAD_VAL] * (max_length - len(labels)) for labels in labels_list]
-    padded_pos = [pos + [config.PAD_IDX] * (max_length - len(pos)) for pos in pos_list] if config.POS else None
-    padded_chars = [[(sentence[i] + [config.PAD_IDX]*(max_word_length-len(sentence[i]))) if i < len(sentence) else ([config.PAD_IDX] * max_word_length) for i in range(max_length)] for sentence in chars_list] if config.CHAR else None
+    pad_token = config.word2idx[config.PAD_TOKEN]
+    pad_label = config.label2idx[config.PAD_TOKEN]
+    pad_pos = config.pos2idx[config.PAD_TOKEN]
+
+    padded_tokens = [tokens + [pad_token] * (max_length - len(tokens)) for tokens in tokens_list]
+    padded_labels = [labels + [pad_label] * (max_length - len(labels)) for labels in labels_list]
+    padded_pos = [pos + [pad_pos] * (max_length - len(pos)) for pos in pos_list] if config.POS else None
+    padded_chars = [[(sentence[i] + [0]*(max_word_length-len(sentence[i]))) if i < len(sentence) else ([0] * max_word_length) for i in range(max_length)] for sentence in chars_list] if config.CHAR else None
 
     # Convert the padded sequences into PyTorch tensors
     tokens_tensor = torch.LongTensor(padded_tokens)
@@ -85,3 +91,4 @@ def seed_everything(seed = config.SEED):
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
+

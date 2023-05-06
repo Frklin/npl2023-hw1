@@ -54,7 +54,7 @@ def main(test_path: str, endpoint: str, batch_size=32):
         logging.error(e, exc_info=True)
         exit(1)
 
-    max_try = 10
+    max_try = 15
     iterator = iter(range(max_try))
 
     while True:

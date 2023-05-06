@@ -48,13 +48,12 @@ class MyDataset(Dataset):
                 if config.CHAR: 
                     char_sent = []
                     for token in tokens:
-                        char_sent.append([ord(char) if ord(char)<199 else 200 for char in token])
+                        char_sent.append([ord(char) if (ord(char)<199 and ord(char) != 0) else 200 for char in token])
                     self.chars.append(char_sent)
                 if config.POS:
                     pos = pos_tag(tokens)  # Tag the sentence with POS tags
                     pos = [tag[1] for tag in pos]  # Get just the POS tags
                     self.pos_tags.append([self.pos2idx[tag] for tag in pos])
-                    
     def __len__(self):
         '''
         Return the number of sentences in the dataset.

@@ -107,7 +107,7 @@ class BiLSTM(nn.Module):
         # LSTM layer
         x = pack_padded_sequence(x, token_lengths, batch_first=True, enforce_sorted=False)
         x, self.hidden = self.bilstm(x)
-        x, _ = pad_packed_sequence(x, batch_first=True, padding_value=config.PAD_IDX)
+        x, _ = pad_packed_sequence(x, batch_first=True, padding_value=config.word2idx[config.PAD_TOKEN])
 
         # Dense layers
         x = self.relu(x)

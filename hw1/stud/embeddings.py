@@ -44,18 +44,20 @@ def load_embeddings(embedding_path: str = config.EMBEDDINGS_PATH, embedding_type
     embeddings = gensim_embeddings.vectors
 
     # Add special tokens to the word2idx dictionary
-    word2idx['<PAD>'] = config.PAD_IDX
-    word2idx['<UNK>'] = len(word2idx) - 1
+    word2idx[config.UNK_TOKEN] = len(word2idx) - 1
+    word2idx[config.PAD_TOKEN] = len(word2idx) - 1
 
+    config.word2idx = word2idx
     # Reassign the indices for the old idx 0
-    word2idx['the'] = 40000
+    # word2idx['the'] = 40000
 
     # Add embeddings for special tokens
-    embeddings[40000] = embeddings[0]
-    embeddings[config.PAD_IDX] = np.zeros((1, gensim_embeddings.vector_size), dtype=np.float32)
+    # embeddings[40000] = embeddings[0]
+    # embeddings[config.PAD_IDX] = np.zeros((1, gensim_embeddings.vector_size), dtype=np.float32)
+    embeddings = np.append(embeddings, np.zeros((1, gensim_embeddings.vector_size), dtype=np.float32), axis=0)
     embeddings = np.append(embeddings, np.random.rand(1, gensim_embeddings.vector_size).astype(np.float32), axis=0)
 
     # Convert the embeddings to a tensor
     embeddings_tensor = torch.tensor(embeddings, dtype=torch.float32)
 
-    return embeddings_tensor, word2idx
+    return embeddings_tensor
