@@ -6,35 +6,41 @@ import config
 from scipy import stats
 import wandb
 import pandas as pd
+import itertools
 
-def plot_confusion_matrix(pred, labels):
-    """
-    This function plots the confusion matrix.
-    """
-    # pred is a list of lists of predictions associated to each token in the respective position.
-    # Ex: Ex: [ ["O", "O", "O", "O", "O"], ["O", "O", "O", "O", "O", "B-ACTION", "O", "O", "O", "O"] ]
-    # labels is a list of lists of labels associated to each token in the respective position.
-    # Ex: Ex: [ ["O", "O", "O", "O", "O"], ["O", "O", "O", "O", "O", "B-ACTION", "O", "O", "O", "O"] ]
-    # The two lists have the same length.
-    # The inner lists have the same length.
-    # plot the confusion matrix
-    confusion_matrix = [[0 for _ in range(len(config.LABELS))] for _ in range(len(config.LABELS))]
-    for i in range(len(pred)):
-        for j in range(len(pred[i])):
-            confusion_matrix[config.LABELS.index(labels[i][j])][config.LABELS.index(pred[i][j])] += 1
-    confusion_matrix = np.array(confusion_matrix)
-    plt.figure(figsize=(10, 10))
-    sns.heatmap(confusion_matrix, annot=True, fmt='d', xticklabels=config.LABELS, yticklabels=config.LABELS)
-    plt.title("Confusion Matrix")
-    plt.xlabel('Predicted')
-    plt.ylabel('True')
+
+def plot_confusion_matrix(preds, labels):
+# Create confusion matrix
+    num_classes = len(config.idx2label)-1
+    confusion_matrix = np.zeros((num_classes, num_classes))
+    for pred, label in zip(preds, labels):
+        for p, l in zip(pred, label):
+            confusion_matrix[l][p] += 1
+    
+    # Normalize confusion matrix
+    row_sums = confusion_matrix.sum(axis=1)
+    confusion_matrix_norm = np.nan_to_num(confusion_matrix / row_sums[:, np.newaxis])
+
+    # remove the last row and column
+    # confusion_matrix_norm = confusion_matrix_norm[:-1, :-1]
+    
+    # Create labels for x-axis and y-axis
+    x_axis_labels = [config.idx2label[i] for i in range(num_classes)]
+    y_axis_labels = [config.idx2label[i] for i in range(num_classes)]
+    
+    # Plot confusion matrix with percentage values
+    fig, ax = plt.subplots(figsize=(12, 12))
+    sns.heatmap(confusion_matrix_norm, annot=True, fmt='.2%', cmap='Blues', cbar=False, xticklabels=x_axis_labels, yticklabels=y_axis_labels, ax=ax)
+    ax.set_xlabel('Predicted Label')
+    ax.set_ylabel('True Label')
+    ax.set_title('Confusion Matrix')
     plt.savefig("hw1/stud/img/confusion_matrix.png")
+
 
 def plot_optimizers_comparison():
     api = wandb.Api()
     runs = api.runs("nlp_stats")
     data = []
-    print(runs[0].name)
     for run in runs:
         data.append({
             'optimizer': run.config['optimizer'],

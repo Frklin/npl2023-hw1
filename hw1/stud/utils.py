@@ -27,11 +27,11 @@ def collate_fn(batch):
 
     Returns:
         tuple: A tuple containing five elements:
-            1. A tensor representing the token ids of the batch.
-            2. A tensor representing the label ids of the batch.
+            1. A tensor representing the padded token ids of the batch.
+            2. A tensor representing the padded label ids of the batch.
             3. A tensor representing the lengths of each token sequence in the batch.
-            4. A tensor representing the part-of-speech tag ids of the batch (optional).
-            5. A tensor representing the character ids of the batch (optional).
+            4. A tensor representing the padded part-of-speech tag ids of the batch (optional).
+            5. A tensor representing the padded character ids of the batch (optional).
     '''
     # Unpack the batch into lists of tokens, labels, part-of-speech tag ids, and character ids
     tokens_list, labels_list, pos_list, chars_list = zip(*batch)

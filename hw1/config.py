@@ -11,7 +11,7 @@ LABEL_COUNT             = 12         # Number of labels
 UNK_TOKEN               = "<UNK>"    # Unknown token
 PAD_TOKEN               = "<PAD>"    # Padding token
 PAD_IDX                 = 0          # Padding index
-PAD_VAL                 = -100         # Padding value
+PAD_VAL                 = 11         # Padding value
 POS                     = True       # Use POS tags
 POS_DIM                 = 47         # POS dimension
 
@@ -46,7 +46,7 @@ SAVE_PATH          = "./model/"
 # SEED
 SEED                    = 42
 
-DEVICE                  = "cpu"#"cuda" if torch.cuda.is_available() else "cpu"
+DEVICE                  = "cuda" if torch.cuda.is_available() else "cpu" #cpu
 print("Using device: ", DEVICE)
 
 pos2idx = {x : idx + 1 for idx, x in enumerate(nltk.load('help/tagsets/upenn_tagset.pickle').keys())}

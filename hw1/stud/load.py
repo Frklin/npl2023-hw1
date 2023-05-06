@@ -54,7 +54,7 @@ class MyDataset(Dataset):
                     pos = pos_tag(tokens)  # Tag the sentence with POS tags
                     pos = [tag[1] for tag in pos]  # Get just the POS tags
                     self.pos_tags.append([self.pos2idx[tag] for tag in pos])
-
+                    
     def __len__(self):
         '''
         Return the number of sentences in the dataset.

@@ -12,6 +12,7 @@ from utils import seed_everything, collate_fn
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from trainer import Trainer
+from plots import plot_confusion_matrix
 
 import nltk
 import wandb
@@ -43,7 +44,7 @@ def main():
     # Load data
     train_dataset = MyDataset(config.TRAIN_PATH, word2idx, label2idx, pos2idx)
     val_dataset = MyDataset(config.VAL_PATH, word2idx, label2idx, pos2idx)
-    test_dataset = MyDataset(config.TEST_PATH, word2idx, label2idx, pos2idx,)
+    test_dataset = MyDataset(config.TEST_PATH, word2idx, label2idx, pos2idx)
 
     # Create dataloaders
     train_loader = DataLoader(train_dataset, batch_size=config.BATCH_SIZE,collate_fn=collate_fn, shuffle=True)
@@ -73,7 +74,7 @@ def main():
     
     # Initialize model
     model = BiLSTM(embeddings, len(config.label2idx), device).to(device)
-    model.load_state_dict(torch.load(config.MODEL_PATH))
+    model.load_state_dict(torch.load(config.MODEL_PATH, map_location=device))
 
     # Initialize optimizer
     optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
@@ -82,10 +83,19 @@ def main():
     loss_function = nn.CrossEntropyLoss(ignore_index=config.label2idx[config.PAD_TOKEN])
 
     # Initialize trainer
-    trainer = Trainer(model, train_loader, val_loader, optimizer, loss_function, device)
+    trainer = Trainer(model, train_loader, val_loader, test_loader, optimizer, loss_function, device)
     
     # Train model
-    trainer.train(config.EPOCHS)
+    # trainer.train(config.EPOCHS)
+
+    # Predict on test set
+    true, preds = trainer.predict()
+
+    # Plot confusion matrix
+    plot_confusion_matrix(preds, true)
+
+
+
 
 
 

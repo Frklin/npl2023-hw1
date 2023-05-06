@@ -11,7 +11,7 @@ import wandb
 
 
 class Trainer:
-    def __init__(self, model, train_dataloader, dev_dataloader, optimizer, loss_function, device, clip=0, classifier=config.CLASSIFIER):
+    def __init__(self, model, train_dataloader, val_dataloader, test_dataloader, optimizer, loss_function, device, clip=0, classifier=config.CLASSIFIER):
         '''
         Initializes the Trainer class.
 
@@ -28,7 +28,8 @@ class Trainer:
 
         self.model = model.to(device)
         self.train_dataloader = train_dataloader
-        self.dev_dataloader = dev_dataloader
+        self.val_dataloader = val_dataloader
+        self.test_dataloader = test_dataloader
         self.optimizer = optimizer
         self.loss_function = loss_function
         self.device = device
@@ -261,3 +262,54 @@ class Trainer:
                 break
 
 
+    def predict(self):
+        '''
+        Predict the labels for the test data.
+
+        Returns:
+            list: A list of lists containing the predicted labels for the test data.
+        '''
+        self.model.eval()
+        preds = []
+        true = []
+
+        with torch.no_grad():
+            for tokens, labels, token_lengths, pos, chars in tqdm(self.test_dataloader):
+                tokens = tokens.to(self.device)
+
+                # Convert POS and character features to tensor and move to device
+                pos, chars = pos.to(self.device) if config.POS else None, chars.to(self.device) if config.CHAR else None
+
+                # Convert POS tags to one-hot vectors
+                if config.POS:
+                    pos_vectors = torch.zeros((len(pos), torch.max(token_lengths), config.POS_DIM),dtype=torch.float32).to(self.device)
+                    
+                    for i, sen in enumerate(pos):
+                        for j, tag in enumerate(sen):
+                            pos_vectors[i][j] = F.one_hot(tag, num_classes=config.POS_DIM)
+                else:
+                    pos_vectors = None
+
+                if self.classifier == 'crf':
+                    # CRF Classifier
+                    m = (labels != config.PAD_VAL)
+                    mask = m.clone().detach().to(torch.uint8)
+                    labels = self.model(labels, token_lengths, pos_vectors, chars, mask)
+                    labels = labels.view(-1).cpu().numpy()
+                    org_idxs = np.where(labels != config.PAD_VAL)[0]
+                    labels = labels[org_idxs]
+                    true.append(labels.tolist())
+                    preds.append(labels.tolist())
+
+                elif self.classifier == 'softmax':
+                    # Softmax Classifier
+                    logits = self.model(tokens, token_lengths, pos_vectors, chars)
+                    pred = logits.argmax(dim=-1).view(-1).cpu().numpy()
+                    labels = labels.view(-1).cpu().numpy()
+                    orig_idxs = np.where(labels != config.PAD_VAL)[0]
+                    labels = labels[orig_idxs]
+                    pred = pred[orig_idxs]
+                    true.append(labels.tolist())
+                    preds.append(pred.tolist())
+
+        return true, preds
