@@ -59,8 +59,8 @@ class BiLSTM(nn.Module):
 
         # CNN layer
         self.char_embeddings = nn.Embedding(config.CHAR_VOCAB_SIZE, config.CHAR_DIM)
-        self.conv1 = nn.Conv1d(config.CHAR_DIM, self.n_filters, kernel_size=3)
-        self.maxpool1 = nn.MaxPool1d(kernel_size=3, padding=1)
+        self.conv2d = nn.Conv2d(1, self.n_filters, kernel_size=(5, config.CHAR_DIM), padding=(0, 1))
+        self.maxpool2d = nn.MaxPool2d(kernel_size=(1,3), padding=(0,1))
 
     def init_hidden(self, batch_size):
         '''
@@ -90,15 +90,15 @@ class BiLSTM(nn.Module):
         x = self.embeddings(tokens)
 
         # Character-level embeddings
-        if config.CHAR:
-            chars = chars.view(-1, chars.shape[-1])
-            char_embs = self.char_embeddings(chars)
-            char_embs = torch.einsum('ijk->ikj', char_embs)
-            char_cnn = self.relu(self.conv1(char_embs))
-            char_cnn = self.maxpool1(char_cnn)
-            char_cnn = torch.max(char_cnn, 2)[0]
-            char_cnn = char_cnn.view(tokens.shape[0], tokens.shape[1], -1)
-            x = torch.cat((x, char_cnn), dim=2)
+        # if config.CHAR:
+        #     chars = chars.view(-1, chars.shape[-1])
+        #     char_embs = self.char_embeddings(chars)
+        #     char_embs = torch.einsum('ijk->ikj', char_embs)
+        #     char_cnn = self.relu(self.conv1(char_embs))
+        #     char_cnn = self.maxpool1(char_cnn)
+        #     char_cnn = torch.max(char_cnn, 2)[0]
+        #     char_cnn = char_cnn.view(tokens.shape[0], tokens.shape[1], -1)
+        #     x = torch.cat((x, char_cnn), dim=2)
 
         # POS tag embeddings
         if config.POS:

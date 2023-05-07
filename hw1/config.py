@@ -15,7 +15,7 @@ POS                     = True       # Use POS tags
 POS_DIM                 = 47         # POS dimension
 
 # CHARACTERS
-CHAR                    = True       # Use character embeddings
+CHAR                    = False       # Use character embeddings
 CHAR_DIM                = 50         # Character embeddings dimension
 CHAR_VOCAB_SIZE         = 230        # Character vocabulary size
 CNN_FILTERS             = 30        # Number of filters
@@ -39,7 +39,7 @@ VAL_PATH                = ROOT + '/dev.jsonl'
 TEST_PATH               = ROOT + '/test.jsonl'
 MODEL_PATH              = "./model/1.pth"
 
-EMBEDDINGS_PATH    = "./hw1/stud/EmbModels/" + EMBEDDING_MODEL
+EMBEDDINGS_PATH    = "./hw1/stud/" + EMBEDDING_MODEL
 SAVE_PATH          = "./model/"
 
 # SEED

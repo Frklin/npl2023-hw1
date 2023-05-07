@@ -69,106 +69,49 @@ class StudentModel(Model):
 
         self.model.eval()
 
-        self.pos2idx = {pos: i for i, pos in enumerate(config.pos2idx)}
 
     def predict(self, tokens: List[List[str]]) -> List[List[str]]:
+        # Initialize empty lists
         pos_tags = []
         chars = []
         inputs = []
 
-        # if config.POS:
-        #     for sentence in tokens:
-        #         pos = pos_tag(sentence)
-        #         pos = [tag[1] for tag in pos]
-
-        #         pos_tags.append([self.pos2idx[tag] for tag in pos])
-        #     padded_pos = [p + [config.PAD_IDX] * (max_length - len(p)) for p in pos_tags] if config.POS else None
-
-        #     pos_vectors = torch.zeros((len(padded_pos), max_length, config.POS_DIM),dtype=torch.float32).to(config.DEVICE)
-
-        #     for i, sen in enumerate(pos_tags):
-        #         for j, tag in enumerate(sen):
-        #             pos_vectors[i][j] = F.one_hot(torch.tensor(tag), num_classes=config.POS_DIM)
-
-
-        # if config.CHAR:
-        #     for sentence in tokens:
-        #         char_sent = []
-        #         for token in sentence:
-        #             char_sent.append([ord(char) if ord(char)<199 else 200 for char in token])
-        #         chars.append(char_sent)
-
-        #     padded_chars = [[(sen[i] + [config.PAD_IDX]*(max_word_length-len(sen[i]))) if i < len(sen) else ([config.PAD_IDX] * max_word_length)  for i in range(max_length)] for sen in chars] if config.CHAR else None
-        #     char_inputs = torch.tensor(padded_chars, dtype=torch.long, device=config.DEVICE) if config.CHAR else None
+        # Get the maximum length of sentences and maximum length of words
         length_list = [len(sentence) for sentence in tokens]
         max_length = max(length_list)
         max_word_length = max([len(word) for sentence in tokens for word in sentence])
         
+        # Preprocess each sentence and convert words to character-level embeddings
         for sentence in tokens:
             sentence = preprocess_sentence(sentence)
-            char_sent = []
-            for word in sentence:
-                char_sent.append([ord(char) if (ord(char)<199 and ord(char) != 0) else 200 for char in word])
+            char_sent = [[ord(char) if (ord(char) < 199 and ord(char) != 0) else 200 for char in word] for word in sentence]
             chars.append(char_sent)
             pos = pos_tag(sentence)  
             pos = [tag[1] for tag in pos] 
-            pos_tags.append([self.pos2idx[tag] for tag in pos])
+            pos_tags.append([config.pos2idx[tag] for tag in pos])
             inputs.append([self.word2idx.get(word, self.word2idx[config.UNK_TOKEN]) for word in sentence])
         
-      
+        # Pad the input sequences and convert character-level embeddings to tensors
         padded_inputs = [sen + [config.word2idx[config.PAD_TOKEN]] * (max_length - len(sen)) for sen in inputs]
         padded_chars = [[(sen[i] + [0]*(max_word_length-len(sen[i]))) if i < len(sen) else ([0] * max_word_length)  for i in range(max_length)] for sen in chars] 
-        padded_pos = [p + [0] * (max_length - len(p)) for p in pos_tags] 
+        padded_pos = [p + [config.pos2idx[config.PAD_TOKEN]] * (max_length - len(p)) for p in pos_tags] 
 
         inputs = torch.tensor(padded_inputs, dtype=torch.long, device=config.DEVICE)
-        char_inputs = torch.tensor(padded_chars, dtype=torch.long, device=config.DEVICE) 
-        # pos_vectors = torch.tensor(pos_vectors, dtype=torch.long, device=config.DEVICE)
+        char_inputs = torch.tensor(padded_chars, dtype=torch.long, device=config.DEVICE)         
+        pos_tensor = torch.tensor(padded_pos, dtype=torch.long, device=config.DEVICE)
         pos_vectors = torch.zeros((len(padded_pos), max_length, config.POS_DIM),dtype=torch.float32).to(config.DEVICE)
 
-        for i, sen in enumerate(padded_pos):
+        # Convert POS tags to one-hot vectors
+        for i, sen in enumerate(pos_tensor):
             for j, tag in enumerate(sen):
-                pos_vectors[i][j] = F.one_hot(torch.tensor(tag), num_classes=config.POS_DIM)
+                pos_vectors[i][j] = F.one_hot(tag, num_classes=config.POS_DIM)
 
-        # for i, sentence in enumerate(tokens):
-        #     for j, word in enumerate(preprocess_sentence(sentence)):
-        #         tokens[i][j] = self.word2idx.get(word, self.word2idx[config.UNK_TOKEN])
-
-        # tokens = [torch.tensor(sentence, dtype=torch.long, device=config.DEVICE) for sentence in tokens]
-
-        # Pad sentences
-        # inputs = torch.nn.utils.rnn.pad_sequence(tokens, batch_first=True, padding_value=self.word2idx[config.PAD_TOKEN]).to(config.DEVICE)
-        
-        # inputs, length_list, pos_vectors, char_inputs = self.pad_everything(inputs, pos_tags, chars)
-        # if config.CLASSIFIER == "crf":
-        m = (inputs != config.word2idx[config.PAD_TOKEN])
+        # Create a mask to ignore padding tokens
+        m = (pos_tensor != config.pos2idx[config.PAD_TOKEN])
         mask = m.clone().detach().to(torch.uint8)
-        predictions = self.model.decode(inputs, length_list, pos_vectors, char_inputs, mask)
-        # else:
-        #     predictions = self.model(inputs, length_list, pos_vectors, chars = char_inputs)
-        #     predictions = torch.argmax(predictions, dim=2).detach().cpu().numpy().tolist()
 
-        # predictions = [sentence[:len(tokens[i])] for i, sentence in enumerate(predictions)]
-
+        # Make predictions using the model
+        predictions = self.model.decode(inputs, length_list, pos_vectors, None, mask)
         predictions = [[config.idx2label[pred] for pred in sentence] for sentence in predictions]
 
-        # plot_confusion_matrix
         return predictions
-
-
-    def pad_everything(self, tokens: List[List[str]], pos_tags: List[List[str]], chars: List[List[List[str]]]):
-        token_lengths = [len(token) for token in tokens]
-        max_length = max(token_lengths)
-        max_word_length = max([len(word) for sentence in chars for word in sentence]) 
-        pad_token = config.word2idx[config.PAD_TOKEN]
-        pad_pos = config.pos2idx[config.PAD_TOKEN]
-
-        padded_tokens = [token + [pad_token] * (max_length - len(token)) for token in tokens]
-        padded_pos = [pos + [pad_pos] * (max_length - len(pos)) for pos in pos_tags] if config.POS else None
-        padded_chars = [[(sentence[i] + [0]*(max_word_length-len(sentence[i]))) if i < len(sentence) else ([0] * max_word_length) for i in range(max_length)] for sentence in chars]
-        
-        tokens_tensor = torch.LongTensor(padded_tokens)
-        lengths_tensor = torch.LongTensor(token_lengths)
-        pos_tensor = torch.LongTensor(padded_pos) 
-        char_tensor = torch.LongTensor(padded_chars)
-   
-        return tokens_tensor, lengths_tensor, pos_tensor, char_tensor

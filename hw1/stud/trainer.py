@@ -260,9 +260,9 @@ class Trainer:
         with torch.no_grad():
             for tokens, labels, token_lengths, pos, chars in tqdm(self.test_dataloader):
                 tokens = tokens.to(self.device)
-
+                labels = labels.to(self.device)
                 # Convert POS and character features to tensor and move to device
-                pos, chars = pos.to(self.device), chars.to(self.device) 
+                pos, chars = pos.to(self.device), chars.to(self.device) if config.CHAR else None
 
                 # Convert POS tags to one-hot vectors
                 if config.POS:
@@ -278,7 +278,7 @@ class Trainer:
                     # CRF Classifier
                     m = (labels != config.PAD_VAL)
                     mask = m.clone().detach().to(torch.uint8)
-                    pred = self.model.decode(labels, token_lengths, pos_vectors, chars, mask)
+                    pred = self.model.decode(tokens, token_lengths, pos_vectors, chars, mask)
                     labels = labels.view(-1).cpu().numpy()
                     org_idxs = np.where(labels != config.PAD_VAL)[0]
                     labels = labels[org_idxs]
