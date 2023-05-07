@@ -79,42 +79,28 @@ class Trainer:
             # Zero the gradients
             self.optimizer.zero_grad()
 
+            m = (labels != config.PAD_VAL)
+            mask = m.clone().detach().to(torch.uint8)
+            logits = self.model(tokens, token_lengths, pos_vectors, chars)
             if self.classifier == 'softmax':
                 # Forward pass
-                logits = self.model(tokens, token_lengths, pos_vectors, chars)
 
                 # Calculate the loss
                 loss = self.loss_function(logits.view(-1, logits.shape[-1]), labels.view(-1))
-
-                # Backward pass and update weights
                 loss.backward()
-                self.optimizer.step()
-
-                # Calculate predictions
-                preds = logits.argmax(dim=-1).view(-1).cpu().numpy()
-                labels = labels.view(-1).cpu().numpy()
-                org_idxs = np.where(labels != config.PAD_VAL)[0]
-                labels = labels[org_idxs]
-                preds = preds[org_idxs].tolist()
             
             elif self.classifier == 'crf':
                 # CRF Classifier
-                m = (labels != config.PAD_VAL)
-                mask = m.clone().detach().to(torch.uint8)
-                
-                self.model.zero_grad()
-                loss = self.model.loss(tokens, labels, token_lengths, pos_vectors, chars, mask)
+                # self.model.zero_grad()
+                loss = self.model.loss(logits, labels, token_lengths, pos_vectors, chars, mask)
                 loss.backward()
-                self.optimizer.step()
+            self.optimizer.step()
 
-                preds = self.model.decode(tokens,token_lengths, pos_vectors, chars, mask)
-                labels = labels.view(-1).cpu().numpy()
-                org_idxs = np.where(labels != config.PAD_VAL)[0]
-                labels = labels[org_idxs]
-                preds = sum(preds, [])
-
-            else:
-                raise NotImplementedError
+            preds = logits.argmax(dim=-1).view(-1).cpu().numpy()
+            labels = labels.view(-1).cpu().numpy()
+            org_idxs = np.where(labels != config.PAD_VAL)[0]
+            labels = labels[org_idxs]
+            preds = preds[org_idxs]
             
             # Clip gradients
             if self.clip > 0:
@@ -166,27 +152,24 @@ class Trainer:
                     pos_vectors = None
 
 
+                m = (labels != config.PAD_VAL)
+                mask = m.clone().detach().to(torch.uint8)
+                logits = self.model(tokens, token_lengths, pos_vectors, chars)
+
                 if self.classifier == 'crf':
                     # CRF Classifier
-                    m = (labels != config.PAD_VAL)
-                    mask = m.clone().detach().to(torch.uint8)
-                    loss = self.model.loss(tokens, labels, token_lengths, pos_vectors, chars, mask)
-                    labels = self.model(labels, token_lengths, pos_vectors, chars, mask)
-                    labels = labels.view(-1).cpu().numpy()
-                    org_idxs = np.where(labels != config.PAD_VAL)[0]
-                    labels = labels[org_idxs]
-                    preds = sum(preds, [])
+                    loss = self.model.loss(logits, labels, token_lengths, pos_vectors, chars, mask)
 
                 elif self.classifier == 'softmax':
                     # Softmax Classifier
-                    logits = self.model(tokens, token_lengths, pos_vectors, chars)
+                    
                     loss = self.loss_function(logits.view(-1, logits.shape[-1]), labels.view(-1))
-                    preds = logits.argmax(dim=-1).view(-1).cpu().numpy()
-                    labels = labels.view(-1).cpu().numpy()
-                    orig_idxs = np.where(labels != config.PAD_VAL)[0]
-                    labels = labels[orig_idxs]
-                    preds = preds[orig_idxs].tolist()
-
+                
+                preds = logits.argmax(dim=-1).view(-1).cpu().numpy()
+                labels = labels.view(-1).cpu().numpy()
+                org_idxs = np.where(labels != config.PAD_VAL)[0]
+                labels = labels[org_idxs]
+                preds = preds[org_idxs]
                 # Update loss
                 total_loss += loss.item()
 
@@ -246,7 +229,7 @@ class Trainer:
             scheduler.step(val_loss)
             
             # Check if the current epoch improves the best validation loss or F1 score
-            if val_loss < self.best_val_loss or val_f1_score > best_f1_score:
+            if val_loss < self.best_val_loss:
                 best_f1_score = val_f1_score
                 self.best_val_loss = val_loss
                 torch.save(self.model.state_dict(), config.MODEL_PATH)

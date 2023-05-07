@@ -110,16 +110,16 @@ class BiLSTM(nn.Module):
         x, _ = pad_packed_sequence(x, batch_first=True, padding_value=config.word2idx[config.PAD_TOKEN])
 
         # Dense layers
-        x = self.relu(x)
-        x = self.dropout(x)
-        x = self.linear(x)
-        x = self.relu(x)
-        x = self.dropout(x)
+        # x = self.relu(x)
+        # x = self.dropout(x)
+        # x = self.linear(x)
+        # x = self.relu(x)
+        # x = self.dropout(x)
         x = self.linear2(x)
 
         return x
         
-    def loss(self, x, y, token_lengths, pos=None, chars=None, mask=None):
+    def loss(self, emissions, y, token_lengths, pos=None, chars=None, mask=None):
         '''Compute the negative log-likelihood loss of the model on the given inputs.
 
         Args:
@@ -133,7 +133,7 @@ class BiLSTM(nn.Module):
         Returns:
         - nll (torch.Tensor): Negative log-likelihood loss value, a scalar.
         '''
-        emissions = self.forward(x, token_lengths, pos=pos, chars=chars, mask=mask)
+        # emissions = self.forward(x, token_lengths, pos=pos, chars=chars, mask=mask)
         nll = -self.crf(emissions, y, mask=mask, reduction='token_mean')
         return nll
 
